@@ -9,9 +9,9 @@ authorbox: false
 toc: false
 mathjax: false
 categories:
-- "computing"
-tags: 
-- "blog"
+{categories}
+tags:
+{tags}
 draft: true
 weight: 5
 ---
@@ -21,3 +21,10 @@ Escribe aquí el resumen de tu nuevo artículo...
 <!--more-->
 
 Escribe aquí el contenido de tu nuevo artículo...
+
+### Enlaces de interés
+- [enlace](www.sherblog.es)
+
+[link]: https://www.google.es
+
+[image-01]: /images/20260121_sherlocaster_01.jpg

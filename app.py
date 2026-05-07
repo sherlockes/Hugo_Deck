@@ -230,6 +230,90 @@ def save_file():
         add_log(f"❌ Error al guardar artículo: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+def get_existing_taxonomies():
+    """Walks through the content directory and extracts unique categories and tags."""
+    categories = set()
+    tags = set()
+    
+    if not os.path.exists(REPO_DIR):
+        return {"categories": [], "tags": []}
+        
+    content_dir = os.path.join(REPO_DIR, "content")
+    if not os.path.exists(content_dir):
+        return {"categories": [], "tags": []}
+        
+    import re
+    
+    for root, _, files in os.walk(content_dir):
+        for file in files:
+            if file.endswith(".md"):
+                full_path = os.path.join(root, file)
+                try:
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        # Read the front matter (usually first 1500 chars)
+                        head = f.read(1500)
+                        
+                    fm_match = re.search(r'^---\s*\n(.*?)\n---', head, re.DOTALL)
+                    if fm_match:
+                        yaml_content = fm_match.group(1)
+                        lines = yaml_content.split("\n")
+                        
+                        in_categories = False
+                        in_tags = False
+                        
+                        for line in lines:
+                            stripped = line.strip()
+                            if not stripped:
+                                continue
+                                
+                            # Check if we transition to a different key
+                            if ":" in stripped and not stripped.startswith("-"):
+                                in_categories = False
+                                in_tags = False
+                                
+                                key, _, val = stripped.partition(":")
+                                key = key.strip().lower()
+                                val = val.strip()
+                                
+                                if key == "categories":
+                                    if val:
+                                        if val.startswith("[") and val.endswith("]"):
+                                            items = [item.strip().strip('"').strip("'") for item in val[1:-1].split(",") if item.strip()]
+                                            categories.update(items)
+                                        else:
+                                            categories.add(val.strip('"').strip("'"))
+                                    else:
+                                        in_categories = True
+                                elif key == "tags":
+                                    if val:
+                                        if val.startswith("[") and val.endswith("]"):
+                                            items = [item.strip().strip('"').strip("'") for item in val[1:-1].split(",") if item.strip()]
+                                            tags.update(items)
+                                        else:
+                                            tags.add(val.strip('"').strip("'"))
+                                    else:
+                                        in_tags = True
+                                        
+                            elif stripped.startswith("-") and (in_categories or in_tags):
+                                val = stripped[1:].strip().strip('"').strip("'")
+                                if val:
+                                    if in_categories:
+                                        categories.add(val)
+                                    elif in_tags:
+                                        tags.add(val)
+                except Exception:
+                    pass
+                    
+    return {
+        "categories": sorted(list(c for c in categories if c)),
+        "tags": sorted(list(t for t in tags if t))
+    }
+
+@app.route("/api/taxonomies", methods=["GET"])
+def get_taxonomies():
+    update_activity()
+    return jsonify(get_existing_taxonomies())
+
 @app.route("/api/new-draft", methods=["POST"])
 def new_draft():
     update_activity()
@@ -237,6 +321,15 @@ def new_draft():
     title = data.get("title", "").strip()
     if not title:
         return jsonify({"status": "error", "message": "El título es obligatorio."}), 400
+        
+    categories = data.get("categories", ["computing"])
+    tags = data.get("tags", ["blog"])
+    
+    # If empty lists are provided, use defaults
+    if not categories:
+        categories = ["computing"]
+    if not tags:
+        tags = ["blog"]
         
     import datetime
     import re
@@ -277,6 +370,9 @@ def new_draft():
     today_iso = today.isoformat()
     thumbnail_path = f"images/{date_str}_{filename_slug}_00.jpg"
     
+    categories_yaml = "\n".join([f'- "{cat}"' for cat in categories])
+    tags_yaml = "\n".join([f'- "{tag}"' for tag in tags])
+    
     # Read custom template if exists, else fallback to default template
     template_path = "new_template.md"
     template_content = ""
@@ -291,7 +387,9 @@ def new_draft():
         default_content = template_content.replace("{title}", title)\
                                           .replace("{date}", today_iso)\
                                           .replace("{creation}", today_iso)\
-                                          .replace("{thumbnail}", thumbnail_path)
+                                          .replace("{thumbnail}", thumbnail_path)\
+                                          .replace("{categories}", categories_yaml)\
+                                          .replace("{tags}", tags_yaml)
     else:
         default_content = f"""---
 title: "{title}"
@@ -304,9 +402,9 @@ authorbox: false
 toc: false
 mathjax: false
 categories:
-- "computing"
+{categories_yaml}
 tags: 
-- "blog"
+{tags_yaml}
 draft: true
 weight: 5
 ---
