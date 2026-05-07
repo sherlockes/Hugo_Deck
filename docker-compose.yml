@@ -1,0 +1,19 @@
+services:
+  hugo-dev:
+    build: .
+    container_name: hugo-deck
+    user: "${UID}:${GID}"
+    ports:
+      - "1313:1313"
+      - "1314:1314"
+    environment:
+      - REPO_URL=https://github.com/sherlockes/sherlockes.github.io.git
+    volumes:
+      - ./repo:/site/repo
+      - ./start.sh:/site/start.sh
+      - ./restart.sh:/site/restart.sh
+      - ./app.py:/site/app.py
+      - ./templates:/site/templates
+      - ./.env:/site/.env
+      - ./new_template.md:/site/new_template.md
+    restart: no

@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hugo Control Center</title>
+    <!-- SVG Favicon with three emerald cubes matching the logo -->
+    <link class="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2334d399'><g transform='translate(0,-2)'><path d='M6 6L2 8v4.5l4 2 4-2V8L6 6zm0 1l3.1 1.5L6 10 2.9 8.5 6 7zm-3.1 2.2l2.6 1.3v2.3l-2.6-1.3V9.2zm5.7 0l-2.6 1.3v2.3l2.6-1.3V9.2z'/><path d='M18 6l-4 2v4.5l4 2 4-2V8l-4-2zm0 1l3.1 1.5-3.1 1.5-3.1-1.5 3.1-1.5zm-3.1 2.2l2.6 1.3v2.3l-2.6-1.3V9.2zm5.7 0l-2.6 1.3v2.3l2.6-1.3V9.2z'/><path d='M12 12l-4 2v4.5l4 2 4-2v-4.5l-4-2zm0 1l3.1 1.5-3.1 1.5-3.1-1.5 3.1-1.5zm-3.1 2.2l2.6 1.3v2.3l-2.6-1.3v-2.3zm5.7 0l-2.6 1.3v2.3l2.6-1.3v-2.3z'/></g></svg>">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden;
+        }
+        .glass-header {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            height: 64px;
+        }
+        .preview-container {
+            height: calc(100vh - 64px);
+            background-color: #090d16; /* Dark space around the frame */
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #ffffff;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .preview-container.editor-active iframe {
+            width: 50% !important;
+            margin-right: 50% !important;
+        }
+        /* Device frame classes */
+        .iframe-mobile {
+            width: 375px;
+            height: 667px;
+            border-radius: 20px;
+            border: 8px solid #1e293b;
+        }
+        .iframe-tablet {
+            width: 768px;
+            height: 1024px;
+            border-radius: 12px;
+            border: 8px solid #1e293b;
+        }
+        .iframe-desktop {
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            border: none;
+        }
+        /* Custom Glowing Pulsing LEDs */
+        @keyframes pulse-green {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            50% { transform: scale(1.25); box-shadow: 0 0 10px 4px rgba(34, 197, 94, 0.4); }
+        }
+        @keyframes pulse-red {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            50% { transform: scale(1.25); box-shadow: 0 0 10px 4px rgba(239, 68, 68, 0.4); }
+        }
+        .led-green {
+            background-color: #22c55e;
+            animation: pulse-green 2s infinite;
+        }
+        .led-red {
+            background-color: #ef4444;
+            animation: pulse-red 2s infinite;
+        }
+        /* Custom Terminal Styling */
+        .terminal-drawer {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 35vh;
+            background: rgba(9, 15, 28, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .terminal-closed {
+            transform: translateY(100%);
+        }
+        .terminal-open {
+            transform: translateY(0);
+        }
+        .editor-drawer {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 50%;
+            height: 100%;
+            background: rgba(9, 15, 28, 0.98);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-left: 2px solid rgba(16, 185, 129, 0.3);
+        }
+        .editor-closed {
+            transform: translateX(100%) !important;
+        }
+        .editor-open {
+            transform: translateX(0) !important;
+        }
+        .vertical-text {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+        .drafts-sidebar {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 320px;
+            height: 100%;
+            background: rgba(9, 15, 28, 0.98);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-left: 2px solid rgba(99, 102, 241, 0.3);
+        }
+        .drafts-closed {
+            transform: translateX(100%) !important;
+        }
+        .drafts-open {
+            transform: translateX(0) !important;
+        }
+        /* Custom Scrollbar for Terminal */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-screen">
+
+    <!-- TOP GLASSBAR -->
+    <header class="glass-header w-full flex items-center justify-between px-6 z-20 shrink-0">
+        <!-- LEFT: Logo & Status & Metrics -->
+        <div class="flex items-center space-x-4 shrink-0">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-cubes text-emerald-400 text-xl"></i>
+                <span class="font-bold text-lg tracking-wide bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Hugo Deck</span>
+            </div>
+            <div class="h-4 w-px bg-slate-700"></div>
+            <div class="flex items-center space-x-2 bg-slate-800/60 px-3 py-1 rounded-full border border-slate-700/50">
+                <span id="status-led" class="h-2.5 w-2.5 rounded-full led-red"></span>
+                <span id="status-text" class="text-xs font-semibold uppercase tracking-wider text-slate-300">Offline</span>
+            </div>
+            <div class="h-4 w-px bg-slate-700"></div>
+            <!-- Small Metrics Stack One Below Another with Full Labels -->
+            <div class="flex flex-col text-[10px] text-slate-400 font-mono leading-tight pl-1 select-none">
+                <div>Total de páginas generadas: <span id="metric-pages" class="text-emerald-400 font-semibold">N/A</span></div>
+                <div>Archivos estáticos procesados: <span id="metric-static" class="text-cyan-400 font-semibold">N/A</span></div>
+                <div>Último tiempo de compilación: <span id="metric-time" class="text-amber-400 font-semibold">N/A</span></div>
+            </div>
+        </div>
+
+        <!-- CENTER: Large Repo Name -->
+        <div class="hidden lg:flex items-center justify-center grow px-4">
+            <span id="repo-name-display" class="font-bold text-base tracking-wider text-slate-300 font-mono select-none truncate max-w-xs xl:max-w-md bg-slate-800/40 px-4 py-1.5 rounded-lg border border-slate-700/30">
+                Cargando repo...
+            </span>
+        </div>
+
+        <!-- RIGHT: Action Controls, Drafts Checkbox, Responsive Toggles, and Utilities -->
+        <div class="flex items-center space-x-3 shrink-0">
+            <!-- Action Controls -->
+            <div class="flex items-center space-x-2">
+                <button onclick="triggerAction('start')" id="btn-start" class="flex items-center space-x-2 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white px-4 py-1.5 rounded-lg border border-emerald-500/30 transition-all duration-200 text-sm font-medium" title="Clone & Start">
+                    <i class="fa-solid fa-rocket"></i>
+                    <span>Clone</span>
+                </button>
+                <button onclick="triggerAction('restart')" id="btn-restart" class="flex items-center space-x-2 bg-amber-500/10 hover:bg-amber-500 text-amber-300 hover:text-slate-950 px-4 py-1.5 rounded-lg border border-amber-500/20 transition-all duration-200 text-sm font-medium" title="Restart Hugo Server">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Restart</span>
+                </button>
+
+                <button onclick="handlePushClick()" id="btn-push" class="flex items-center space-x-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white px-4 py-1.5 rounded-lg border border-indigo-500/30 transition-all duration-200 text-sm font-medium" title="Push to GitHub">
+                    <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                    <span>Push</span>
+                </button>
+            </div>
+
+            <!-- Drafts Checkbox -->
+            <div class="flex items-center bg-slate-800/40 px-3 py-1.5 rounded-lg border border-slate-700/30 text-xs">
+                <label class="flex items-center space-x-2 cursor-pointer select-none">
+                    <input type="checkbox" id="chk-drafts-future" onchange="updateConfig()" class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-900 w-3.5 h-3.5 transition duration-150 cursor-pointer">
+                    <span class="text-slate-300 font-medium">Drafts</span>
+                </label>
+            </div>
+
+            <!-- Responsive View Controls -->
+            <div id="view-controls" class="hidden flex items-center bg-slate-800/40 border border-slate-700/30 rounded-lg p-1 space-x-1 select-none">
+                <button onclick="setPreviewSize('mobile')" id="btn-view-mobile" class="text-slate-400 hover:text-white p-1.5 rounded transition duration-150" title="Vista Móvil">
+                    <i class="fa-solid fa-mobile-screen-button text-xs"></i>
+                </button>
+                <button onclick="setPreviewSize('tablet')" id="btn-view-tablet" class="text-slate-400 hover:text-white p-1.5 rounded transition duration-150" title="Vista Tablet">
+                    <i class="fa-solid fa-tablet-screen-button text-xs"></i>
+                </button>
+                <button onclick="setPreviewSize('desktop')" id="btn-view-desktop" class="text-emerald-400 hover:text-white p-1.5 rounded transition duration-150 bg-white/5" title="Vista Escritorio">
+                    <i class="fa-solid fa-laptop text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Utilities -->
+            <button onclick="refreshIframe()" class="text-slate-400 hover:text-white p-2 rounded-lg bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 transition-all duration-150" title="Refrescar Vista Previa">
+                <i class="fa-solid fa-rotate"></i>
+            </button>
+            <button onclick="toggleTerminal()" class="flex items-center space-x-2 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white px-4 py-1.5 rounded-lg border border-slate-700/50 transition-all duration-150 text-sm font-medium">
+                <i class="fa-solid fa-terminal text-xs"></i>
+                <span>Logs</span>
+                <span id="log-badge" class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- LIVE PREVIEW AREA -->
+    <main class="preview-container w-full grow relative z-10">
+        <iframe id="preview-iframe" class="iframe-desktop" src="about:blank"></iframe>
+        
+        <!-- Floating Tabs Vertical Group (Absolute inside preview container to bypass iframe events) -->
+        <div class="absolute top-[12%] right-0 z-30 flex flex-col space-y-0.5 items-end pointer-events-none" style="pointer-events: none !important;">
+            
+            <!-- Vertical Tab Drafts Button -->
+            <button id="btn-floating-drafts" onclick="toggleDraftsSidebar()" class="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-bold py-4 px-2.5 rounded-l-xl shadow-2xl hover:shadow-indigo-900/40 transition-all duration-200 transform hover:-translate-x-1 flex flex-col items-center space-y-2 border-l border-t border-b border-indigo-400/25 cursor-pointer select-none" style="display: none !important; pointer-events: auto !important;" title="Ver Borradores/Próximos">
+                <i class="fa-solid fa-file-signature text-sm animate-pulse"></i>
+                <span class="vertical-text text-[10px] tracking-wider uppercase">Drafts</span>
+            </button>
+
+            <!-- Vertical Tab New Button -->
+            <button id="btn-floating-new" onclick="createNewDraft()" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-4 px-2.5 rounded-l-xl shadow-2xl hover:shadow-amber-900/40 transition-all duration-200 transform hover:-translate-x-1 flex flex-col items-center space-y-2 border-l border-t border-b border-amber-400/25 cursor-pointer select-none" style="pointer-events: auto !important;" title="Crear Nuevo Artículo (Borrador)">
+                <i class="fa-solid fa-file-circle-plus text-sm animate-pulse"></i>
+                <span class="vertical-text text-[10px] tracking-wider uppercase">New</span>
+            </button>
+
+            <!-- Vertical Tab Edit Button -->
+            <button id="btn-floating-edit" onclick="openEditorModal()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 px-2.5 rounded-l-xl shadow-2xl hover:shadow-emerald-900/40 transition-all duration-200 transform hover:-translate-x-1 flex flex-col items-center space-y-2 border-l border-t border-b border-emerald-400/25 cursor-pointer select-none" style="display: none !important; pointer-events: auto !important;" title="Editar Artículo Actual">
+                <i class="fa-solid fa-pen-to-square text-sm animate-pulse"></i>
+                <span class="vertical-text text-[10px] tracking-wider uppercase">Edit</span>
+            </button>
+
+        </div>
+
+        <!-- DRAFTS SIDEBAR -->
+        <div id="drafts-sidebar" class="drafts-sidebar drafts-closed absolute top-0 bottom-0 right-0 z-40 flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="flex items-center justify-between px-6 py-4 bg-slate-950/40 border-b border-slate-800 shrink-0">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-signature text-indigo-400 text-sm"></i>
+                    <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider">Borradores y Futuros</h3>
+                </div>
+                <button onclick="toggleDraftsSidebar(false)" class="text-slate-400 hover:text-white transition-colors duration-150 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <!-- Sidebar Content -->
+            <div id="drafts-list-container" class="grow overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <div class="text-xs text-slate-500 text-center py-8">Cargando borradores...</div>
+            </div>
+        </div>
+        
+        <!-- EDITOR DRAWER (Nested inside preview area for 100% bulletproof rendering) -->
+        <div id="editor-drawer" class="editor-drawer editor-closed absolute top-0 bottom-0 right-0 z-40 flex flex-col">
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between px-6 py-4 bg-slate-950/40 border-b border-slate-800 shrink-0">
+                <div class="flex flex-col min-w-0">
+                    <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-2">
+                        <i class="fa-solid fa-pen-to-square text-emerald-400"></i>
+                        <span>Editor de Artículo</span>
+                    </h3>
+                    <p id="editor-file-path" class="text-[10px] font-mono text-slate-400 truncate mt-0.5 max-w-[400px]"></p>
+                </div>
+                <button onclick="closeEditorDrawer()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Drawer Body (Markdown Textarea) -->
+            <div class="grow flex flex-col p-6 min-h-0">
+                <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+                    Contenido (Markdown)
+                </label>
+                <textarea id="editor-textarea" class="grow w-full bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none overflow-y-auto custom-scrollbar leading-relaxed" placeholder="Escribe aquí tu contenido en Markdown..."></textarea>
+            </div>
+
+            <!-- Drawer Footer -->
+            <div class="flex flex-col px-6 py-4 bg-slate-950/40 border-t border-slate-800 shrink-0 space-y-3">
+                <div id="editor-status-msg" class="text-xs font-medium text-slate-400 truncate max-w-md"></div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="closeEditorDrawer()" class="grow bg-slate-800 hover:bg-slate-750 text-slate-300 font-medium py-2 px-4 rounded-lg text-xs transition">
+                        Cancelar
+                    </button>
+                    <button onclick="saveEditedFile()" id="btn-editor-save" class="grow bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium py-2 px-4 rounded-lg text-xs shadow-lg hover:shadow-emerald-900/30 transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span id="editor-save-btn-text">Guardar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+
+        
+        <!-- Loading overlay when Hugo is offline -->
+        <div id="offline-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-30 transition-opacity duration-300">
+            <div class="bg-slate-850 p-8 rounded-2xl border border-slate-700/50 flex flex-col items-center text-center shadow-2xl max-w-sm">
+                <div class="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 border border-slate-700">
+                    <i class="fa-solid fa-power-off text-2xl text-slate-500" id="power-icon"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2 text-slate-200">Servidor Hugo Inactivo</h3>
+                <p class="text-slate-400 text-sm mb-6">El servidor de desarrollo no está activo. Utiliza el botón de arriba para iniciar el entorno.</p>
+                <button onclick="triggerAction('start')" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium text-sm py-2 px-6 rounded-lg shadow-lg hover:shadow-emerald-900/30 transition-all duration-200 w-full">
+                    Iniciar Servidor Ahora
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- TERMINAL DRAWER -->
+    <div id="terminal-drawer" class="terminal-drawer terminal-closed fixed bottom-0 left-0 right-0 z-30 flex flex-col">
+        <!-- Terminal Header -->
+        <div class="flex items-center justify-between px-6 py-2 bg-black/40 border-b border-white/5 shrink-0">
+            <div class="flex items-center space-x-2 text-slate-400 text-xs font-mono">
+                <i class="fa-solid fa-circle text-[10px] text-red-500"></i>
+                <i class="fa-solid fa-circle text-[10px] text-yellow-500"></i>
+                <i class="fa-solid fa-circle text-[10px] text-green-500"></i>
+                <span class="ml-2">hugo-server.log</span>
+            </div>
+            <button onclick="toggleTerminal()" class="text-slate-400 hover:text-white transition-colors duration-150">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <!-- Terminal Body -->
+        <div id="terminal-body" class="grow p-4 font-mono text-xs overflow-y-auto custom-scrollbar text-emerald-400 select-text">
+            <!-- Logs will be inserted here -->
+        </div>
+    </div>
+
+    <!-- GIT PUSH MODAL -->
+    <div id="push-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700/50 p-6 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="h-10 w-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                    <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-100">Subir cambios a GitHub</h3>
+            </div>
+            
+            <p class="text-slate-400 text-xs mb-4">Se guardarán todas tus modificaciones locales, se creará un commit y se subirán a tu repositorio remoto en GitHub.</p>
+            
+            <div class="space-y-4">
+                <!-- Commit Message Input -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Mensaje del Commit</label>
+                    <input type="text" id="push-commit-msg" placeholder="Ej: Añadido nuevo artículo (opcional)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+                
+                <!-- Personal Access Token (PAT) Input -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider flex items-center justify-between">
+                        <span>GitHub Token (PAT)</span>
+                        <a href="https://github.com/settings/tokens" target="_blank" class="text-indigo-400 hover:underline text-[10px] normal-case">Crear Token <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i></a>
+                    </label>
+                    <input type="password" id="push-token" placeholder="ghp_xxxxxxxxxxxx (opcional si ya está configurado)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+            </div>
+
+            <!-- Error message container -->
+            <div id="push-error" class="hidden mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-xs font-medium"></div>
+            
+            <!-- Success message container -->
+            <div id="push-success" class="hidden mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs font-medium"></div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-3 mt-6">
+                <button onclick="closePushModal()" id="btn-push-cancel" class="grow bg-slate-800 hover:bg-slate-750 text-slate-300 font-medium py-2 px-4 rounded-lg text-sm transition">
+                    Cancelar
+                </button>
+                <button onclick="executePush()" id="btn-push-confirm" class="grow bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-medium py-2 px-4 rounded-lg text-sm shadow-lg hover:shadow-indigo-900/30 transition flex items-center justify-center space-x-2">
+                    <span id="push-btn-text">Subir Cambios</span>
+                </button>
+        </div>
+    </div>
+
+    <!-- ONLINE EDITOR MODAL -->
+    <div id="editor-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-slate-900/95 border border-slate-700/50 rounded-2xl shadow-2xl w-11/12 h-[85vh] max-w-6xl flex flex-col overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 bg-slate-950/50 border-b border-slate-800 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                        <i class="fa-solid fa-pen-to-square text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-100">Editor de Artículo</h3>
+                        <p id="editor-file-path" class="text-slate-500 text-xs font-mono"></p>
+                    </div>
+                </div>
+                <button onclick="closeEditorModal()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1.5 rounded-lg hover:bg-slate-800">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="grow flex overflow-hidden min-h-0">
+                <div class="w-full flex flex-col p-4 border-r border-slate-800 min-w-0">
+                    <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider flex justify-between items-center">
+                        <span>Contenido (Markdown)</span>
+                        <span class="text-[10px] text-slate-500 capitalize">Guarda para refrescar la vista en vivo</span>
+                    </label>
+                    <textarea id="editor-textarea" class="grow w-full bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none overflow-y-auto custom-scrollbar" placeholder="Escribe aquí tu contenido en Markdown..."></textarea>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between px-6 py-4 bg-slate-950/50 border-t border-slate-800 shrink-0">
+                <div id="editor-status-msg" class="text-xs font-medium text-slate-400 truncate max-w-md"></div>
+                <div class="flex items-center space-x-3 shrink-0">
+                    <button onclick="closeEditorModal()" id="btn-editor-cancel" class="bg-slate-800 hover:bg-slate-750 text-slate-300 font-medium py-2 px-6 rounded-lg text-sm transition">
+                        Cancelar
+                    </button>
+                    <button onclick="saveEditedFile()" id="btn-editor-save" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium py-2 px-8 rounded-lg text-sm shadow-lg hover:shadow-emerald-900/30 transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span id="editor-save-btn-text">Guardar y Aplicar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isTerminalOpen = false;
+        let lastLogCount = 0;
+        let isServerOnline = false;
+        let currentEditableFilePath = '';
+        let currentEditablePath = '';
+
+        // Listen for postMessage from the iframe (navigation events)
+        window.addEventListener('message', async (event) => {
+            console.log("Hugo Deck received message:", event.data);
+            if (event.data && event.data.type === 'hugo-deck-navigate') {
+                const path = event.data.path;
+                currentEditablePath = path;
+                console.log("Setting currentEditablePath to:", currentEditablePath);
+                await checkPathEditability(path);
+            }
+        });
+
+        async function checkPathEditability(path) {
+            console.log("Checking editability for path:", path);
+            const btn = document.getElementById('btn-floating-edit');
+            try {
+                const res = await fetch(`/api/edit-info?path=${encodeURIComponent(path)}`);
+                const data = await res.json();
+                console.log("Editability API response:", data);
+                if (data.editable) {
+                    currentEditableFilePath = data.file_path;
+                    btn.style.setProperty('display', 'flex', 'important');
+                    console.log("Button made VISIBLE for file:", currentEditableFilePath);
+                } else {
+                    btn.style.setProperty('display', 'none', 'important');
+                    console.log("Button HIDDEN (not editable)");
+                }
+            } catch (err) {
+                console.error("Error checking editability:", err);
+                btn.classList.add('hidden');
+            }
+        }
+
+        async function createNewDraft() {
+            const title = prompt("Introduce el título del nuevo artículo:");
+            if (!title || !title.trim()) return;
+
+            try {
+                const res = await fetch('/api/new-draft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title.trim() })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    currentEditablePath = data.url_path;
+                    currentEditableFilePath = data.file_path;
+
+                    const textarea = document.getElementById('editor-textarea');
+                    const pathDisplay = document.getElementById('editor-file-path');
+                    const statusMsg = document.getElementById('editor-status-msg');
+                    const saveBtnText = document.getElementById('editor-save-btn-text');
+                    const drawer = document.getElementById('editor-drawer');
+
+                    if (textarea) textarea.value = data.content;
+                    if (pathDisplay) pathDisplay.textContent = data.file_path;
+                    if (statusMsg) {
+                        statusMsg.textContent = '¡Borrador creado con éxito!';
+                        statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                    }
+                    if (saveBtnText) saveBtnText.textContent = 'Guardar';
+                    document.getElementById('btn-editor-save').disabled = false;
+
+                    if (drawer) {
+                        drawer.classList.remove('editor-closed');
+                        drawer.classList.add('editor-open');
+                    }
+                    const btn = document.getElementById('btn-floating-edit');
+                    if (btn) btn.style.setProperty('display', 'none', 'important');
+                    const previewCont = document.querySelector('.preview-container');
+                    if (previewCont) previewCont.classList.add('editor-active');
+
+                    const chk = document.getElementById('chk-drafts-future');
+                    if (chk && !chk.checked) {
+                        if (confirm("¿Quieres activar el modo 'Drafts' para poder previsualizar tu nuevo borrador en el iframe?")) {
+                            chk.checked = true;
+                            updateConfig();
+                        }
+                    } else {
+                        const iframe = document.getElementById('preview-iframe');
+                        if (iframe) {
+                            iframe.src = `http://${window.location.hostname}:1313` + data.url_path;
+                        }
+                    }
+                } else {
+                    alert(data.message || "Error al crear el borrador.");
+                }
+            } catch (err) {
+                console.error("Error creating new draft:", err);
+                alert("Error de conexión al crear el borrador.");
+            }
+        }
+
+        async function openEditorModal() {
+            console.log("openEditorModal called. currentEditablePath is:", currentEditablePath);
+            if (!currentEditablePath) return;
+            const textarea = document.getElementById('editor-textarea');
+            const pathDisplay = document.getElementById('editor-file-path');
+            const statusMsg = document.getElementById('editor-status-msg');
+            const saveBtnText = document.getElementById('editor-save-btn-text');
+            const drawer = document.getElementById('editor-drawer');
+
+            statusMsg.textContent = '';
+            statusMsg.className = 'text-xs font-medium text-slate-400 truncate max-w-md';
+            saveBtnText.textContent = 'Guardar';
+            document.getElementById('btn-editor-save').disabled = false;
+
+            try {
+                const res = await fetch(`/api/edit-info?path=${encodeURIComponent(currentEditablePath)}`);
+                const data = await res.json();
+                console.log("Drawer load API response:", data);
+                if (data.editable) {
+                    textarea.value = data.content;
+                    pathDisplay.textContent = data.file_path;
+                    currentEditableFilePath = data.file_path;
+                    
+                    drawer.classList.remove('editor-closed');
+                    drawer.classList.add('editor-open');
+                    const btn = document.getElementById('btn-floating-edit');
+                    if (btn) btn.style.setProperty('display', 'none', 'important');
+                    const previewCont = document.querySelector('.preview-container');
+                    if (previewCont) previewCont.classList.add('editor-active');
+                    console.log("Drawer opened on side with content loaded");
+                    setTimeout(() => {
+                        const rect = drawer.getBoundingClientRect();
+                        const styles = window.getComputedStyle(drawer);
+                        console.log("DIAGNOSTIC - Drawer Rect:", rect);
+                        console.log("DIAGNOSTIC - Drawer Styles - display:", styles.display, "visibility:", styles.visibility, "opacity:", styles.opacity, "transform:", styles.transform, "height:", styles.height, "zIndex:", styles.zIndex);
+                    }, 500);
+                } else {
+                    alert("Este contenido no se puede editar online.");
+                }
+            } catch (err) {
+                console.error("Error loading editor info:", err);
+                alert("Error al intentar cargar el editor.");
+            }
+        }
+
+        function closeEditorDrawer() {
+            const drawer = document.getElementById('editor-drawer');
+            drawer.classList.remove('editor-open');
+            drawer.classList.add('editor-closed');
+            const previewCont = document.querySelector('.preview-container');
+            if (previewCont) previewCont.classList.remove('editor-active');
+            
+            // Re-evaluate button visibility based on the current active page
+            if (currentEditablePath) {
+                checkPathEditability(currentEditablePath);
+            }
+        }
+
+        let isDraftsSidebarOpen = false;
+
+        async function toggleDraftsSidebar(open) {
+            const sidebar = document.getElementById('drafts-sidebar');
+            if (open === undefined) {
+                isDraftsSidebarOpen = !isDraftsSidebarOpen;
+            } else {
+                isDraftsSidebarOpen = open;
+            }
+
+            if (isDraftsSidebarOpen) {
+                sidebar.classList.remove('drafts-closed');
+                sidebar.classList.add('drafts-open');
+                await loadDrafts();
+            } else {
+                sidebar.classList.remove('drafts-open');
+                sidebar.classList.add('drafts-closed');
+            }
+        }
+
+        async function loadDrafts() {
+            const container = document.getElementById('drafts-list-container');
+            container.innerHTML = '<div class="text-xs text-slate-500 text-center py-8"><i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Cargando borradores...</div>';
+            
+            try {
+                const res = await fetch('/api/drafts');
+                const drafts = await res.json();
+                
+                if (!drafts || drafts.length === 0) {
+                    container.innerHTML = '<div class="text-xs text-slate-500 text-center py-8">No hay borradores ni publicaciones futuras.</div>';
+                    return;
+                }
+                
+                container.innerHTML = drafts.map(item => {
+                    const badgeClass = item.is_draft 
+                        ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
+                        : 'bg-blue-500/10 border-blue-500/30 text-blue-400';
+                    const badgeText = item.is_draft ? 'Borrador' : 'Futuro';
+                    
+                    return `
+                        <div onclick="navigateAndViewDraft('${item.url_path}')" class="p-3 bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700/60 rounded-xl cursor-pointer transition duration-150 flex flex-col space-y-1.5 group select-none">
+                            <div class="flex items-start justify-between space-x-2">
+                                <span class="text-xs font-semibold text-slate-200 group-hover:text-white transition line-clamp-2">${escapeHtml(item.title)}</span>
+                                <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md border shrink-0 ${badgeClass}">${badgeText}</span>
+                            </div>
+                            <div class="flex items-center space-x-1.5 text-[10px] text-slate-500 font-mono">
+                                <i class="fa-solid fa-calendar text-[9px]"></i>
+                                <span>${escapeHtml(item.date || 'Sin fecha')}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Error loading drafts:", err);
+                container.innerHTML = '<div class="text-xs text-rose-400 text-center py-8">Error al cargar borradores.</div>';
+            }
+        }
+
+        function navigateAndViewDraft(urlPath) {
+            const fullUrl = `http://${window.location.hostname}:1313` + urlPath;
+            console.log("Draft Navigation - Attempting to load URL:", fullUrl);
+            const iframe = document.getElementById('preview-iframe');
+            if (iframe) {
+                iframe.src = fullUrl;
+            }
+            currentEditablePath = urlPath;
+            toggleDraftsSidebar(false);
+        }
+
+        async function saveEditedFile() {
+            const content = document.getElementById('editor-textarea').value;
+            const statusMsg = document.getElementById('editor-status-msg');
+            const saveBtn = document.getElementById('btn-editor-save');
+            const saveBtnText = document.getElementById('editor-save-btn-text');
+
+            saveBtn.disabled = true;
+            saveBtnText.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Guardando...';
+            statusMsg.textContent = '';
+
+            try {
+                const res = await fetch('/api/save-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: currentEditableFilePath, content: content })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    statusMsg.textContent = '¡Guardado con éxito! Recompilando...';
+                    statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                    saveBtnText.textContent = '¡Guardado!';
+                    
+                    const termBody = document.getElementById('terminal-body');
+                    termBody.innerHTML += `<div class="text-emerald-400">[Control] Artículo guardado con éxito. Esperando Live Reload...</div>`;
+                    termBody.scrollTop = termBody.scrollHeight;
+
+                    setTimeout(() => {
+                        closeEditorDrawer();
+                    }, 1000);
+                } else {
+                    statusMsg.textContent = data.message || 'Error al intentar guardar.';
+                    statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                    saveBtnText.textContent = 'Reintentar';
+                    saveBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error("Error saving file:", err);
+                statusMsg.textContent = 'Error de conexión con el servidor.';
+                statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                saveBtnText.textContent = 'Reintentar';
+                saveBtn.disabled = false;
+            }
+        }
+
+        let autoSaveTimer = null;
+        function handleAutoSave() {
+            const statusMsg = document.getElementById('editor-status-msg');
+            if (statusMsg) {
+                statusMsg.textContent = 'Escribiendo...';
+                statusMsg.className = 'text-xs font-medium text-slate-400 truncate max-w-md';
+            }
+            
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(async () => {
+                const content = document.getElementById('editor-textarea').value;
+                if (statusMsg) {
+                    statusMsg.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-1 text-emerald-400"></i> Auto-guardando...';
+                }
+                
+                try {
+                    const res = await fetch('/api/save-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: currentEditableFilePath, content: content })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.status === 'success') {
+                        if (statusMsg) {
+                            statusMsg.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Cambios guardados automáticamente';
+                            statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                        }
+                    } else {
+                        if (statusMsg) {
+                            statusMsg.textContent = 'Error al auto-guardar.';
+                            statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                        }
+                    }
+                } catch (err) {
+                    console.error("Auto-save error:", err);
+                    if (statusMsg) {
+                        statusMsg.textContent = 'Error de conexión para auto-guardar.';
+                        statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                    }
+                }
+            }, 1200);
+        }
+
+        // Initialize iframe source based on current host
+        const iframe = document.getElementById('preview-iframe');
+        const previewUrl = `http://${window.location.hostname}:1313`;
+
+        async function init() {
+            // Fetch initial config
+            await fetchConfig();
+            // Set up status and logs polling
+            pollStatus();
+            pollLogs();
+            setInterval(pollStatus, 2000);
+            setInterval(pollLogs, 1500);
+
+            // Set up editor scroll synchronization
+            const textarea = document.getElementById('editor-textarea');
+            if (textarea) {
+                const syncScroll = () => {
+                    const percentage = textarea.scrollTop / (textarea.scrollHeight - textarea.clientHeight);
+                    const iframe = document.getElementById('preview-iframe');
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage({
+                            type: 'hugo-deck-scroll',
+                            percentage: isNaN(percentage) ? 0 : percentage
+                        }, '*');
+                    }
+                };
+                
+                textarea.addEventListener('scroll', syncScroll);
+                textarea.addEventListener('keyup', syncScroll);
+                textarea.addEventListener('click', syncScroll);
+                textarea.addEventListener('input', handleAutoSave);
+            }
+        }
+
+        function updateDraftsTabVisibility() {
+            const chk = document.getElementById('chk-drafts-future');
+            const btnDrafts = document.getElementById('btn-floating-drafts');
+            if (chk && btnDrafts) {
+                if (chk.checked) {
+                    btnDrafts.style.setProperty('display', 'flex', 'important');
+                } else {
+                    btnDrafts.style.setProperty('display', 'none', 'important');
+                    if (isDraftsSidebarOpen) {
+                        toggleDraftsSidebar(false);
+                    }
+                }
+            }
+        }
+
+        let githubTokenConfigured = false;
+
+        async function fetchConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                document.getElementById('chk-drafts-future').checked = data.build_drafts_and_future;
+                updateDraftsTabVisibility();
+                githubTokenConfigured = data.github_token_configured || false;
+
+                // Extract repository name from URL (e.g. "sherlockes.github.io" from "https://github.com/sherlockes/sherlockes.github.io.git")
+                if (data.repo_url) {
+                    const urlParts = data.repo_url.split('/');
+                    let repoName = urlParts[urlParts.length - 1];
+                    if (repoName.endsWith('.git')) {
+                        repoName = repoName.slice(0, -4);
+                    }
+                    document.getElementById('repo-name-display').textContent = repoName;
+                } else {
+                    document.getElementById('repo-name-display').textContent = 'Repositorio';
+                }
+            } catch (err) {
+                console.error("Error fetching config:", err);
+            }
+        }
+
+        async function updateConfig() {
+            const build_drafts_and_future = document.getElementById('chk-drafts-future').checked;
+            updateDraftsTabVisibility();
+            
+            try {
+                // Visual terminal log
+                const termBody = document.getElementById('terminal-body');
+                termBody.innerHTML += `<div class="text-indigo-400">[Control] Actualizando flags de compilación...</div>`;
+                termBody.scrollTop = termBody.scrollHeight;
+
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ build_drafts_and_future })
+                });
+                
+                // Force state to offline immediately to force a clean reload once the server is back online
+                isServerOnline = false;
+
+                // Trigger restart automatically to apply changes
+                triggerAction('restart');
+            } catch (err) {
+                console.error("Error updating config:", err);
+            }
+        }
+
+        async function pollStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                const statusLed = document.getElementById('status-led');
+                const statusText = document.getElementById('status-text');
+                const overlay = document.getElementById('offline-overlay');
+                const powerIcon = document.getElementById('power-icon');
+                const viewControls = document.getElementById('view-controls');
+
+                if (data.running) {
+                    statusLed.className = 'h-2.5 w-2.5 rounded-full led-green';
+                    statusText.textContent = 'Online';
+                    statusText.className = 'text-xs font-semibold uppercase tracking-wider text-emerald-400';
+                    overlay.classList.add('opacity-0', 'pointer-events-none');
+                    powerIcon.className = 'fa-solid fa-circle-check text-2xl text-emerald-400';
+                    viewControls.classList.remove('hidden');
+                    
+                    // Update dynamic build statistics
+                    if (data.metrics) {
+                        document.getElementById('metric-pages').textContent = data.metrics.pages || 'N/A';
+                        document.getElementById('metric-static').textContent = data.metrics.static_files || 'N/A';
+                        document.getElementById('metric-time').textContent = data.metrics.build_time || 'N/A';
+                    }
+
+                    if (!isServerOnline) {
+                        isServerOnline = true;
+                        // Delayed iframe load to allow Hugo server socket binding
+                        setTimeout(() => {
+                            iframe.src = previewUrl;
+                        }, 800);
+                    }
+                } else {
+                    statusLed.className = 'h-2.5 w-2.5 rounded-full led-red';
+                    statusText.textContent = 'Offline';
+                    statusText.className = 'text-xs font-semibold uppercase tracking-wider text-rose-400';
+                    overlay.classList.remove('opacity-0', 'pointer-events-none');
+                    powerIcon.className = 'fa-solid fa-power-off text-2xl text-slate-500';
+                    viewControls.classList.add('hidden');
+                    isServerOnline = false;
+                    iframe.src = 'about:blank';
+                    const btnEdit = document.getElementById('btn-floating-edit');
+                    if (btnEdit) btnEdit.style.setProperty('display', 'none', 'important');
+                    
+                    // Reset metrics when offline
+                    document.getElementById('metric-pages').textContent = 'N/A';
+                    document.getElementById('metric-static').textContent = 'N/A';
+                    document.getElementById('metric-time').textContent = 'N/A';
+                }
+            } catch (err) {
+                console.error("Error polling status:", err);
+            }
+        }
+
+        async function pollLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                const termBody = document.getElementById('terminal-body');
+                const badge = document.getElementById('log-badge');
+                
+                if (data.logs) {
+                    // Check if there are any errors in the logs to indicate status
+                    const hasError = data.logs.some(log => log.includes('ERROR') || log.includes('Failed'));
+                    if (hasError) {
+                        badge.className = 'h-2 w-2 rounded-full bg-rose-500 animate-pulse';
+                    } else {
+                        badge.className = 'h-2 w-2 rounded-full bg-emerald-400';
+                    }
+
+                    if (data.logs.length !== lastLogCount) {
+                        const shouldScroll = termBody.scrollHeight - termBody.clientHeight <= termBody.scrollTop + 50;
+                        
+                        termBody.innerHTML = data.logs.map(log => {
+                            let colorClass = 'text-slate-300';
+                            if (log.includes('ERROR') || log.includes('Failed')) {
+                                colorClass = 'text-red-400 font-bold';
+                            } else if (log.includes('WARN')) {
+                                colorClass = 'text-amber-400';
+                            } else if (log.includes('🚀') || log.includes('started') || log.includes('completed')) {
+                                colorClass = 'text-emerald-400';
+                            } else if (log.includes('🧹') || log.includes('📥')) {
+                                colorClass = 'text-cyan-400';
+                            } else if (log.includes('git-push:') || log.includes('Git Push') || log.includes('🎉 Git Push')) {
+                                colorClass = 'text-indigo-400 font-semibold';
+                            }
+                            return `<div class="${colorClass}">${escapeHtml(log)}</div>`;
+                        }).join('');
+                        
+                        if (shouldScroll || lastLogCount === 0) {
+                            termBody.scrollTop = termBody.scrollHeight;
+                        }
+                        
+                        lastLogCount = data.logs.length;
+                    }
+                }
+            } catch (err) {
+                console.error("Error polling logs:", err);
+            }
+        }
+
+        async function triggerAction(action) {
+            try {
+                // Add a visual temporary log
+                const termBody = document.getElementById('terminal-body');
+                termBody.innerHTML += `<div class="text-indigo-400">[Control] Enviando comando: ${action}...</div>`;
+                termBody.scrollTop = termBody.scrollHeight;
+
+                if (action === 'restart' || action === 'stop') {
+                    isServerOnline = false;
+                    iframe.src = 'about:blank';
+                    const btnEdit = document.getElementById('btn-floating-edit');
+                    if (btnEdit) btnEdit.style.setProperty('display', 'none', 'important');
+                }
+
+                await fetch(`/api/${action}`, { method: 'POST' });
+                
+                if (action === 'start' || action === 'restart') {
+                    if (!isTerminalOpen) {
+                        toggleTerminal(); // Auto open terminal to show progress
+                    }
+                }
+            } catch (err) {
+                console.error(`Error triggering ${action}:`, err);
+            }
+        }
+
+        function toggleTerminal() {
+            const drawer = document.getElementById('terminal-drawer');
+            isTerminalOpen = !isTerminalOpen;
+            
+            if (isTerminalOpen) {
+                drawer.classList.remove('terminal-closed');
+                drawer.classList.add('terminal-open');
+            } else {
+                drawer.classList.remove('terminal-open');
+                drawer.classList.add('terminal-closed');
+            }
+        }
+
+        function setPreviewSize(size) {
+            const iframe = document.getElementById('preview-iframe');
+            const btnMobile = document.getElementById('btn-view-mobile');
+            const btnTablet = document.getElementById('btn-view-tablet');
+            const btnDesktop = document.getElementById('btn-view-desktop');
+            
+            // Reset styles and classes
+            iframe.className = '';
+            btnMobile.className = 'text-slate-400 hover:text-white p-1.5 rounded transition duration-150';
+            btnTablet.className = 'text-slate-400 hover:text-white p-1.5 rounded transition duration-150';
+            btnDesktop.className = 'text-slate-400 hover:text-white p-1.5 rounded transition duration-150';
+            
+            if (size === 'mobile') {
+                iframe.classList.add('iframe-mobile');
+                btnMobile.classList.add('text-emerald-400', 'bg-white/5');
+            } else if (size === 'tablet') {
+                iframe.classList.add('iframe-tablet');
+                btnTablet.classList.add('text-emerald-400', 'bg-white/5');
+            } else {
+                iframe.classList.add('iframe-desktop');
+                btnDesktop.classList.add('text-emerald-400', 'bg-white/5');
+            }
+        }
+
+        function refreshIframe() {
+            if (isServerOnline) {
+                iframe.src = previewUrl;
+            }
+        }
+
+        function handlePushClick() {
+            if (githubTokenConfigured) {
+                executeDirectPush();
+            } else {
+                openPushModal();
+            }
+        }
+
+        async function executeDirectPush() {
+            const btn = document.getElementById('btn-push');
+            const origContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin text-xs"></i> <span>Pushing...</span>';
+
+            if (!isTerminalOpen) {
+                toggleTerminal();
+            }
+
+            try {
+                const res = await fetch('/api/push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'Update' })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    btn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i> <span>Push OK!</span>';
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = origContent;
+                    }, 3000);
+                } else if (data.status === 'warning') {
+                    alert(data.message);
+                    btn.disabled = false;
+                    btn.innerHTML = origContent;
+                } else {
+                    alert(data.message || 'Error al intentar subir los cambios directos.');
+                    btn.disabled = false;
+                    btn.innerHTML = origContent;
+                }
+            } catch (err) {
+                console.error("Direct push error:", err);
+                alert('Error de conexión al intentar subir los cambios.');
+                btn.disabled = false;
+                btn.innerHTML = origContent;
+            }
+        }
+
+        function openPushModal() {
+            document.getElementById('push-modal').classList.remove('hidden');
+            document.getElementById('push-commit-msg').value = '';
+            document.getElementById('push-error').classList.add('hidden');
+            document.getElementById('push-success').classList.add('hidden');
+            document.getElementById('btn-push-confirm').disabled = false;
+            document.getElementById('btn-push-cancel').disabled = false;
+            document.getElementById('push-btn-text').textContent = 'Subir Cambios';
+        }
+
+        function closePushModal() {
+            document.getElementById('push-modal').classList.add('hidden');
+        }
+
+        async function executePush() {
+            const commitMsg = document.getElementById('push-commit-msg').value;
+            const token = document.getElementById('push-token').value;
+            const errDiv = document.getElementById('push-error');
+            const succDiv = document.getElementById('push-success');
+            const confirmBtn = document.getElementById('btn-push-confirm');
+            const cancelBtn = document.getElementById('btn-push-cancel');
+            const btnText = document.getElementById('push-btn-text');
+
+            errDiv.classList.add('hidden');
+            succDiv.classList.add('hidden');
+            confirmBtn.disabled = true;
+            cancelBtn.disabled = true;
+            btnText.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Haciendo Push...';
+
+            if (!isTerminalOpen) {
+                toggleTerminal(); // Auto open terminal to show push logs progress
+            }
+
+            try {
+                const res = await fetch('/api/push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: commitMsg, token: token })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status !== 'error') {
+                    if (data.status === 'warning') {
+                        errDiv.textContent = data.message;
+                        errDiv.classList.remove('hidden');
+                        btnText.textContent = 'Subir Cambios';
+                        confirmBtn.disabled = false;
+                        cancelBtn.disabled = false;
+                    } else {
+                        succDiv.textContent = data.message;
+                        succDiv.classList.remove('hidden');
+                        btnText.textContent = '¡Completado!';
+                        if (token) {
+                            githubTokenConfigured = true;
+                        }
+                        setTimeout(() => {
+                            closePushModal();
+                        }, 2000);
+                    }
+                } else {
+                    errDiv.textContent = data.message || 'Error al intentar subir los cambios.';
+                    errDiv.classList.remove('hidden');
+                    btnText.textContent = 'Reintentar';
+                    confirmBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                }
+            } catch (err) {
+                errDiv.textContent = 'Error de red al conectar con el servidor.';
+                errDiv.classList.remove('hidden');
+                btnText.textContent = 'Reintentar';
+                confirmBtn.disabled = false;
+                cancelBtn.disabled = false;
+            }
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Use DOMContentLoaded instead of window.onload to prevent Slow-loading CDN assets from freezing the Javascript execution.
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+
+
+</body>
+</html>
