@@ -16,4 +16,8 @@ draft: true
 weight: 5
 ---
 
+Escribe aquí el resumen de tu nuevo artículo...
+
+<!--more-->
+
 Escribe aquí el contenido de tu nuevo artículo...
