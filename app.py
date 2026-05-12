@@ -230,6 +230,261 @@ def save_file():
         add_log(f"❌ Error al guardar artículo: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/delete-file", methods=["POST"])
+def delete_file():
+    update_activity()
+    data = request.json or {}
+    rel_file_path = data.get("file_path", "").strip()
+
+    if not rel_file_path:
+        return jsonify({"status": "error", "message": "No se proporcionó la ruta del archivo."}), 400
+
+    full_path = os.path.abspath(os.path.join(REPO_DIR, rel_file_path))
+    if not full_path.startswith(os.path.abspath(REPO_DIR)):
+        return jsonify({"status": "error", "message": "Acceso denegado."}), 403
+
+    if not os.path.exists(full_path):
+        return jsonify({"status": "error", "message": "Archivo no encontrado."}), 404
+
+    try:
+        os.remove(full_path)
+        add_log(f"🗑️ Artículo eliminado: {rel_file_path}")
+        return jsonify({"status": "success", "message": "Artículo eliminado con éxito."})
+    except Exception as e:
+        add_log(f"❌ Error al eliminar artículo: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/move-file", methods=["POST"])
+def move_file():
+    update_activity()
+    data = request.json or {}
+    rel_file_path = data.get("file_path", "").strip()
+    destination = data.get("destination", "").strip()
+
+    if not rel_file_path or not destination:
+        return jsonify({"status": "error", "message": "Faltan parámetros (file_path o destination)."}), 400
+
+    full_src = os.path.abspath(os.path.join(REPO_DIR, rel_file_path))
+    full_dst = os.path.abspath(os.path.join(REPO_DIR, destination))
+    repo_abs = os.path.abspath(REPO_DIR)
+
+    if not full_src.startswith(repo_abs) or not full_dst.startswith(repo_abs):
+        return jsonify({"status": "error", "message": "Acceso denegado."}), 403
+
+    if not os.path.exists(full_src):
+        return jsonify({"status": "error", "message": "Archivo de origen no encontrado."}), 404
+
+    if os.path.exists(full_dst):
+        return jsonify({"status": "error", "message": "Ya existe un archivo en la ruta de destino."}), 409
+
+    try:
+        os.makedirs(os.path.dirname(full_dst), exist_ok=True)
+        shutil.move(full_src, full_dst)
+        new_rel_path = os.path.relpath(full_dst, REPO_DIR)
+        add_log(f"📦 Artículo movido: {rel_file_path} → {new_rel_path}")
+        return jsonify({"status": "success", "message": "Artículo movido con éxito.", "new_path": new_rel_path})
+    except Exception as e:
+        add_log(f"❌ Error al mover artículo: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/list-dirs", methods=["GET"])
+def list_dirs():
+    update_activity()
+    content_dir = os.path.join(REPO_DIR, "content")
+    if not os.path.exists(content_dir):
+        return jsonify({"name": "content", "path": "content", "children": []})
+
+    SKIP = {'.git', '.github', '__pycache__', 'node_modules', '.cache', '.hugo_build.lock'}
+
+    def build_tree(abs_path, rel_path):
+        children = []
+        try:
+            for entry in sorted(os.listdir(abs_path)):
+                if entry.startswith('.') or entry in SKIP:
+                    continue
+                full = os.path.join(abs_path, entry)
+                if os.path.isdir(full):
+                    child_rel = f"{rel_path}/{entry}"
+                    children.append({
+                        "name": entry,
+                        "path": child_rel,
+                        "children": build_tree(full, child_rel)
+                    })
+        except PermissionError:
+            pass
+        return children
+
+    return jsonify({
+        "name": "content",
+        "path": "content",
+        "children": build_tree(content_dir, "content")
+    })
+
+@app.route("/api/list-articles", methods=["GET"])
+def list_articles():
+    update_activity()
+    content_dir = os.path.join(REPO_DIR, "content")
+    if not os.path.exists(content_dir):
+        return jsonify([])
+
+    import re as _re
+
+    def slugify_simple(text):
+        text = text.lower()
+        accents = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", "ü": "u"}
+        for k, v in accents.items():
+            text = text.replace(k, v)
+        text = _re.sub(r'[^a-z0-9\s._-]', '', text)
+        text = _re.sub(r'[\s_]+', '-', text)
+        text = _re.sub(r'-+', '-', text)
+        return text.strip('-')
+
+    articles = []
+    for root, _, files in os.walk(content_dir):
+        for file in files:
+            if not file.endswith(".md"):
+                continue
+            full_path = os.path.join(root, file)
+            try:
+                with open(full_path, "r", encoding="utf-8") as f:
+                    head = f.read(1200)
+
+                title = file.rsplit(".", 1)[0]
+                slug = ""
+                url_path = ""
+
+                fm = _re.search(r'^---\s*\n(.*?)\n---', head, _re.DOTALL)
+                if fm:
+                    for line in fm.group(1).split("\n"):
+                        line = line.strip()
+                        if line.startswith("title:"):
+                            v = line.split(":", 1)[1].strip().strip('"').strip("'")
+                            if v:
+                                title = v
+                        elif line.startswith("slug:"):
+                            slug = line.split(":", 1)[1].strip().strip('"').strip("'")
+                        elif line.startswith("url:"):
+                            url_path = line.split(":", 1)[1].strip().strip('"').strip("'")
+
+                if not url_path:
+                    if slug:
+                        url_path = f"/{slug}/"
+                    else:
+                        base = file.rsplit(".", 1)[0]
+                        base = _re.sub(r'^\d{8}_', '', base)
+                        base = _re.sub(r'^\d{4}-\d{2}-\d{2}-', '', base)
+                        url_path = f"/{slugify_simple(base)}/"
+
+                articles.append({
+                    "title": title,
+                    "file_path": os.path.relpath(full_path, REPO_DIR),
+                    "url_path": url_path
+                })
+            except Exception:
+                pass
+
+    articles.sort(key=lambda x: x["title"].lower())
+    return jsonify(articles)
+
+@app.route("/api/upload-image", methods=["POST"])
+def upload_image():
+    update_activity()
+    data = request.json or {}
+    file_path = data.get("file_path", "").strip()
+    image_b64 = data.get("image", "")
+    is_clipboard = data.get("is_clipboard", False)
+    is_thumbnail = data.get("is_thumbnail", False)
+    if isinstance(is_thumbnail, str):
+        is_thumbnail = is_thumbnail.lower() in ("true", "1", "yes")
+    add_log(f"📸 Procesando subida de imagen (is_thumbnail={is_thumbnail})")
+    
+    if not file_path:
+        return jsonify({"status": "error", "message": "Falta la ruta del artículo."}), 400
+    if not image_b64:
+        return jsonify({"status": "error", "message": "Falta la imagen."}), 400
+        
+    filename = os.path.basename(file_path)
+    content = ""
+    full_article_path = os.path.join(REPO_DIR, file_path)
+    if os.path.exists(full_article_path):
+        try:
+            with open(full_article_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception as e:
+            add_log(f"⚠️ Error al leer el artículo para buscar fecha: {e}")
+            
+    # Parse date from front matter (creation: "YYYY-MM-DD" or date: "YYYY-MM-DD")
+    date_str = ""
+    slug = ""
+    if content:
+        import re
+        creation_match = re.search(r'^creation:\s*["\']?(\d{4})[-_/]?(\d{2})[-_/]?(\d{2})["\']?', content, re.MULTILINE)
+        if creation_match:
+            date_str = f"{creation_match.group(1)}{creation_match.group(2)}{creation_match.group(3)}"
+        else:
+            date_match = re.search(r'^date:\s*["\']?(\d{4})[-_/]?(\d{2})[-_/]?(\d{2})["\']?', content, re.MULTILINE)
+            if date_match:
+                date_str = f"{date_match.group(1)}{date_match.group(2)}{date_match.group(3)}"
+
+    # Fallback to filename parsing
+    import re
+    fn_match = re.match(r'^(\d{8})_(.*?)\.md$', filename)
+    if fn_match:
+        if not date_str:
+            date_str = fn_match.group(1)
+        slug = fn_match.group(2)
+    else:
+        if not date_str:
+            import datetime
+            date_str = datetime.date.today().strftime("%Y%m%d")
+        slug = filename.rsplit(".", 1)[0]
+        
+    # Standardize slug: lowercase, replace hyphens with underscores
+    slug = slug.lower().replace("-", "_")
+    
+    # Save directory: repo/static/images/
+    images_dir = os.path.join(REPO_DIR, "static", "images")
+    try:
+        os.makedirs(images_dir, exist_ok=True)
+    except Exception as e:
+        add_log(f"❌ Error al crear directorio de imágenes: {e}")
+        return jsonify({"status": "error", "message": "No se pudo crear el directorio de imágenes."}), 500
+        
+    if is_thumbnail:
+        num_str = "00"
+        candidate_name = f"{date_str}_{slug}_00.jpg"
+        candidate_path = os.path.join(images_dir, candidate_name)
+    else:
+        # Find the first free number XX
+        num = 1
+        while True:
+            num_str = f"{num:02d}"
+            candidate_name = f"{date_str}_{slug}_{num_str}.jpg"
+            candidate_path = os.path.join(images_dir, candidate_name)
+            if not os.path.exists(candidate_path):
+                break
+            num += 1
+        
+    # Decode Base64 and write image
+    import base64
+    try:
+        header, encoded = image_b64.split(",", 1) if "," in image_b64 else ("", image_b64)
+        image_bytes = base64.b64decode(encoded)
+        
+        with open(candidate_path, "wb") as img_file:
+            img_file.write(image_bytes)
+            
+        add_log(f"📸 Guardada nueva imagen: {candidate_name} ({'Portapapeles' if is_clipboard else 'Archivo'})")
+        return jsonify({
+            "status": "success",
+            "num": num_str,
+            "filename": candidate_name
+        })
+    except Exception as e:
+        add_log(f"❌ Error al guardar la imagen {candidate_name}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 def get_existing_taxonomies():
     """Walks through the content directory and extracts unique categories and tags."""
     categories = set()

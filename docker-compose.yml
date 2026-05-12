@@ -16,4 +16,4 @@ services:
       - ./templates:/site/templates
       - ./.env:/site/.env
       - ./new_template.md:/site/new_template.md
-    restart: no
+    restart: unless-stopped

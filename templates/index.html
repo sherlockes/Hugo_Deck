@@ -169,9 +169,9 @@
             <div class="h-4 w-px bg-slate-700"></div>
             <!-- Small Metrics Stack One Below Another with Full Labels -->
             <div class="flex flex-col text-[10px] text-slate-400 font-mono leading-tight pl-1 select-none">
-                <div>Total de páginas generadas: <span id="metric-pages" class="text-emerald-400 font-semibold">N/A</span></div>
-                <div>Archivos estáticos procesados: <span id="metric-static" class="text-cyan-400 font-semibold">N/A</span></div>
-                <div>Último tiempo de compilación: <span id="metric-time" class="text-amber-400 font-semibold">N/A</span></div>
+                <div>Páginas generadas: <span id="metric-pages" class="text-emerald-400 font-semibold">N/A</span></div>
+                <div>Archivos estáticos: <span id="metric-static" class="text-cyan-400 font-semibold">N/A</span></div>
+                <div>Tiempo compilación: <span id="metric-time" class="text-amber-400 font-semibold">N/A</span></div>
             </div>
         </div>
 
@@ -290,9 +290,14 @@
                     </h3>
                     <p id="editor-file-path" class="text-[10px] font-mono text-slate-400 truncate mt-0.5 max-w-[400px]"></p>
                 </div>
-                <button onclick="closeEditorDrawer()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
+                <div class="flex items-center space-x-1">
+                    <button onclick="deleteArticle()" id="btn-editor-delete" class="text-slate-500 hover:text-rose-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-rose-500/10" title="Eliminar artículo permanentemente">
+                        <i class="fa-solid fa-trash text-sm"></i>
+                    </button>
+                    <button onclick="closeEditorDrawer()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1.5 rounded-lg hover:bg-slate-800" title="Cerrar editor">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Drawer Body (Markdown Textarea) -->
@@ -306,15 +311,86 @@
             <!-- Drawer Footer -->
             <div class="flex flex-col px-6 py-4 bg-slate-950/40 border-t border-slate-800 shrink-0 space-y-3">
                 <div id="editor-status-msg" class="text-xs font-medium text-slate-400 truncate max-w-md"></div>
-                <div class="flex items-center space-x-3">
-                    <button onclick="closeEditorDrawer()" class="grow bg-slate-800 hover:bg-slate-750 text-slate-300 font-medium py-2 px-4 rounded-lg text-xs transition">
-                        Cancelar
+                <div class="flex items-center space-x-2">
+                    <button onclick="openLinkPickerModal()" id="btn-editor-link" class="flex-1 bg-slate-700/50 hover:bg-violet-500/20 text-slate-400 hover:text-violet-300 font-medium py-2 px-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5 border border-slate-700/40 hover:border-violet-500/40" title="Insertar enlace a otro artículo del repo">
+                        <i class="fa-solid fa-link"></i>
+                        <span>Enlace</span>
                     </button>
-                    <button onclick="saveEditedFile()" id="btn-editor-save" class="grow bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium py-2 px-4 rounded-lg text-xs shadow-lg hover:shadow-emerald-900/30 transition flex items-center justify-center space-x-1.5">
+                    <button onclick="moveArticle()" id="btn-editor-move" class="flex-1 bg-amber-500/15 hover:bg-amber-500 text-amber-400 hover:text-slate-950 font-medium py-2 px-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5 border border-amber-500/30 hover:border-amber-500" title="Mover este artículo a otra ubicación">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Mover</span>
+                    </button>
+                    <button onclick="insertImagePrompt()" id="btn-editor-insert-image" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2 px-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-image"></i>
+                        <span>Imagen</span>
+                    </button>
+                    <button onclick="saveEditedFile()" id="btn-editor-save" class="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium py-2 px-2 rounded-lg text-xs shadow-lg hover:shadow-emerald-900/30 transition flex items-center justify-center space-x-1.5">
                         <i class="fa-solid fa-floppy-disk"></i>
                         <span id="editor-save-btn-text">Guardar</span>
                     </button>
                 </div>
+            </div>
+        </div>
+        
+        <!-- INSERT IMAGE MODAL -->
+        <div id="image-upload-modal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-slate-900 border border-slate-700/50 p-6 rounded-2xl shadow-2xl max-w-lg w-full mx-4">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <i class="fa-solid fa-image text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-100">Insertar Imagen</h3>
+                    </div>
+                    <button onclick="closeImageUploadModal()" class="text-slate-400 hover:text-white transition-colors duration-150">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                
+                <p class="text-slate-400 text-xs mb-6">Selecciona cómo deseas incluir la imagen en el artículo actual o actualizar el thumbnail de portada.</p>
+                
+                <div class="grid grid-cols-3 gap-4 pb-1">
+                    <!-- From File Button -->
+                    <button onclick="triggerFileImageSelect()" class="flex flex-col items-center justify-center p-5 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 rounded-xl transition duration-150 group" title="Cargar imagen *.jpg local e insertarla en el cursor">
+                        <div class="h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-150">
+                            <i class="fa-solid fa-file-image text-lg text-emerald-400"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200 text-center">Desde Archivo</span>
+                        <span class="text-[10px] text-slate-500 mt-1 text-center">Seleccionar *.jpg</span>
+                    </button>
+                    
+                    <!-- From Clipboard Button -->
+                    <button onclick="activateClipboardPasteMode()" class="flex flex-col items-center justify-center p-5 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/40 rounded-xl transition duration-150 group" title="Pegar un recorte de pantalla desde el portapapeles (Ctrl+V) de 550px">
+                        <div class="h-12 w-12 rounded-full bg-indigo-500/10 border border-indigo-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-150">
+                            <i class="fa-solid fa-clipboard text-lg text-indigo-400"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200 text-center">Del Portapapeles</span>
+                        <span class="text-[10px] text-slate-500 mt-1 text-center">Recorte (550px)</span>
+                    </button>
+
+                    <!-- From Thumbnail Button -->
+                    <button onclick="triggerThumbnailSelect()" class="flex flex-col items-center justify-center p-5 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl transition duration-150 group" title="Subir imagen *.jpg de portada para el artículo actual, sobreescribiendo el archivo _00.jpg">
+                        <div class="h-12 w-12 rounded-full bg-amber-500/10 border border-amber-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-150">
+                            <i class="fa-solid fa-image text-lg text-amber-400"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200 text-center">Thumbnail</span>
+                        <span class="text-[10px] text-slate-500 mt-1 text-center">Portada (_00.jpg)</span>
+                    </button>
+                </div>
+                
+                <!-- Paste Area (hidden by default, shown when clipboard selected) -->
+                <div id="clipboard-paste-area-container" class="hidden mt-6 space-y-3">
+                    <div class="bg-slate-950 border border-dashed border-indigo-500/30 p-6 rounded-xl flex flex-col items-center justify-center text-center">
+                        <div class="animate-bounce mb-2">
+                            <i class="fa-solid fa-paste text-indigo-400 text-xl"></i>
+                        </div>
+                        <p class="text-xs font-medium text-slate-300">Presiona <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700 text-[10px] font-mono shadow-sm">Ctrl + V</kbd> para pegar la imagen</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Se redimensionará automáticamente a 550px de ancho.</p>
+                    </div>
+                </div>
+                
+                <!-- Hidden inputs -->
+                <input type="file" id="image-file-input" accept="image/jpeg,image/jpg" class="hidden" onchange="handleFileImageSelected(event)">
             </div>
         </div>
         
@@ -576,12 +652,105 @@
         </div>
     </div>
 
+    <!-- MOVE ARTICLE MODAL -->
+    <div id="move-article-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col" style="max-height: 82vh;">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="h-10 w-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-folder-open text-amber-400"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-bold text-slate-100">Mover Artículo</h3>
+                        <p id="move-modal-src" class="text-[10px] text-slate-500 font-mono truncate max-w-xs"></p>
+                    </div>
+                </div>
+                <button onclick="closeMoveModal()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1.5 rounded-lg hover:bg-slate-800 shrink-0">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Tree -->
+            <div class="px-6 pt-4 pb-2 shrink-0">
+                <p class="text-xs text-slate-400">Selecciona la carpeta de destino:</p>
+            </div>
+            <div id="move-dir-tree" class="mx-6 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-3 custom-scrollbar font-mono text-xs" style="min-height: 180px; max-height: 42vh;">
+                <div class="text-slate-500 py-4 text-center">
+                    <i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Cargando...
+                </div>
+            </div>
+
+            <!-- Selected path display -->
+            <div class="px-6 pt-4 shrink-0">
+                <label class="block text-[10px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">Ruta de destino</label>
+                <input id="move-dest-input" type="text" readonly
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-amber-300 font-mono focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    placeholder="Haz clic en una carpeta del árbol...">
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-3 px-6 py-4 shrink-0">
+                <button onclick="closeMoveModal()" class="grow bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2 px-4 rounded-lg text-sm transition">
+                    Cancelar
+                </button>
+                <button onclick="confirmMove()" id="btn-confirm-move"
+                    class="grow bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-semibold py-2 px-4 rounded-lg text-sm shadow-lg transition flex items-center justify-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled>
+                    <i class="fa-solid fa-folder-tree"></i>
+                    <span id="btn-confirm-move-text">Mover aquí</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LINK PICKER MODAL -->
+    <div id="link-picker-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col" style="max-height: 80vh;">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="h-10 w-10 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-link text-violet-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100">Insertar Enlace</h3>
+                        <p class="text-[10px] text-slate-500">Selecciona un artículo para insertar su enlace en el cursor</p>
+                    </div>
+                </div>
+                <button onclick="closeLinkPickerModal()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1.5 rounded-lg hover:bg-slate-800 shrink-0">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Search -->
+            <div class="px-6 pt-4 pb-3 shrink-0">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500 text-xs">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" id="link-search-input" oninput="filterLinkArticles()"
+                        placeholder="Buscar por título o ruta..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition">
+                </div>
+            </div>
+
+            <!-- Article list -->
+            <div id="link-articles-list" class="mx-6 mb-6 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-2 custom-scrollbar flex flex-col space-y-0.5" style="min-height: 160px; max-height: 45vh;">
+                <div class="text-slate-500 py-6 text-center text-xs">
+                    <i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Cargando artículos...
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let isTerminalOpen = false;
         let lastLogCount = 0;
         let isServerOnline = false;
         let currentEditableFilePath = '';
         let currentEditablePath = '';
+        let isUploadingThumbnail = false;
 
         // Listen for postMessage from the iframe (navigation events)
         window.addEventListener('message', async (event) => {
@@ -638,6 +807,7 @@
             
             document.getElementById('btn-new-draft-next-text').textContent = 'Siguiente';
             document.getElementById('btn-new-draft-next-icon').className = 'fa-solid fa-chevron-right text-[10px]';
+            document.getElementById('btn-new-draft-next').disabled = false;
             
             updateStepIndicators();
             
@@ -1150,6 +1320,298 @@
             }
         }
 
+        async function deleteArticle() {
+            if (!currentEditableFilePath) {
+                alert('No hay ningún artículo cargado en el editor.');
+                return;
+            }
+            const fileName = currentEditableFilePath.split('/').pop();
+            const confirmed = confirm(`¿Seguro que deseas ELIMINAR permanentemente el artículo?\n\n"${fileName}"\n\nEsta acción no se puede deshacer.`);
+            if (!confirmed) return;
+
+            const statusMsg = document.getElementById('editor-status-msg');
+            const deleteBtn = document.getElementById('btn-editor-delete');
+            deleteBtn.disabled = true;
+            if (statusMsg) {
+                statusMsg.textContent = 'Eliminando artículo...';
+                statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+            }
+
+            try {
+                const res = await fetch('/api/delete-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: currentEditableFilePath })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    if (statusMsg) statusMsg.textContent = '¡Artículo eliminado!';
+                    setTimeout(() => {
+                        closeEditorDrawer();
+                        currentEditableFilePath = '';
+                        currentEditablePath = '';
+                        document.getElementById('btn-floating-edit').style.setProperty('display', 'none', 'important');
+                        // Navigate iframe to site root
+                        const previewIframe = document.getElementById('preview-iframe');
+                        if (previewIframe) {
+                            previewIframe.src = `http://${window.location.hostname}:1313/`;
+                        }
+                    }, 800);
+                } else {
+                    if (statusMsg) {
+                        statusMsg.textContent = data.message || 'Error al eliminar el artículo.';
+                        statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                    }
+                    deleteBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error('Error deleting article:', err);
+                if (statusMsg) {
+                    statusMsg.textContent = 'Error de conexión al intentar eliminar.';
+                    statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                }
+                deleteBtn.disabled = false;
+            }
+        }
+
+        // ── Move Article: tree-picker modal ──────────────────────────────
+        let _selectedMoveDir = null;   // null = repo root, string = relative dir
+        let _selectedMoveRow = null;
+
+        function moveArticle() {
+            if (!currentEditableFilePath) {
+                alert('No hay ningún artículo cargado en el editor.');
+                return;
+            }
+            openMoveModal();
+        }
+
+        async function openMoveModal() {
+            _selectedMoveDir = null;
+            _selectedMoveRow = null;
+            document.getElementById('move-dest-input').value = '';
+            const confirmBtn = document.getElementById('btn-confirm-move');
+            confirmBtn.disabled = true;
+            document.getElementById('btn-confirm-move-text').textContent = 'Mover aquí';
+            document.getElementById('move-modal-src').textContent = currentEditableFilePath;
+            document.getElementById('move-dir-tree').innerHTML =
+                '<div class="text-slate-500 py-6 text-center"><i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Cargando árbol de directorios...</div>';
+
+            // Ensure the modal is a direct child of body so that
+            // the CSS transform on editor-drawer doesn't trap the fixed overlay
+            const modal = document.getElementById('move-article-modal');
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+            modal.classList.remove('hidden');
+
+            try {
+                const res = await fetch('/api/list-dirs');
+                const tree = await res.json();
+                const container = document.getElementById('move-dir-tree');
+                container.innerHTML = '';
+                const ul = document.createElement('ul');
+                ul.className = 'space-y-0.5';
+                ul.appendChild(_buildTreeNode(tree, true));
+                container.appendChild(ul);
+            } catch (err) {
+                document.getElementById('move-dir-tree').innerHTML =
+                    '<div class="text-rose-400 py-6 text-center"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error al cargar directorios.</div>';
+            }
+        }
+
+        function closeMoveModal() {
+            document.getElementById('move-article-modal').classList.add('hidden');
+        }
+
+        function _buildTreeNode(node, isRoot) {
+            const li = document.createElement('li');
+            const hasChildren = node.children && node.children.length > 0;
+
+            // Row
+            const row = document.createElement('div');
+            row.className = 'flex items-center space-x-1.5 py-1 px-2 rounded-lg cursor-pointer hover:bg-slate-800/70 select-none transition-colors duration-100';
+            row.dataset.path = node.path || '';
+
+            // Chevron toggle
+            const chevron = document.createElement('button');
+            chevron.type = 'button';
+            chevron.className = 'w-3.5 h-3.5 flex items-center justify-center text-slate-600 shrink-0 transition-transform duration-150';
+            if (hasChildren) {
+                chevron.innerHTML = isRoot
+                    ? '<i class="fa-solid fa-chevron-down text-[9px]"></i>'
+                    : '<i class="fa-solid fa-chevron-right text-[9px]"></i>';
+                chevron.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const childWrap = li.querySelector(':scope > .move-children');
+                    const isHidden = childWrap.classList.toggle('hidden');
+                    chevron.innerHTML = isHidden
+                        ? '<i class="fa-solid fa-chevron-right text-[9px]"></i>'
+                        : '<i class="fa-solid fa-chevron-down text-[9px]"></i>';
+                });
+            } else {
+                chevron.innerHTML = '<span style="width:10px"></span>';
+            }
+
+            // Folder icon
+            const icon = document.createElement('i');
+            icon.className = 'fa-solid fa-folder text-amber-400/60 text-[11px] shrink-0';
+
+            // Label
+            const label = document.createElement('span');
+            label.className = 'text-slate-300 text-[11px] leading-none';
+            label.textContent = isRoot ? 'content/' : node.name;
+
+            row.appendChild(chevron);
+            row.appendChild(icon);
+            row.appendChild(label);
+            row.addEventListener('click', () => _selectMoveDir(node.path || '', row, icon));
+            li.appendChild(row);
+
+            // Children
+            if (hasChildren) {
+                const childWrap = document.createElement('div');
+                childWrap.className = 'move-children pl-4 mt-0.5' + (isRoot ? '' : ' hidden');
+                const childUl = document.createElement('ul');
+                childUl.className = 'space-y-0.5';
+                node.children.forEach(child => childUl.appendChild(_buildTreeNode(child, false)));
+                childWrap.appendChild(childUl);
+                li.appendChild(childWrap);
+            }
+
+            return li;
+        }
+
+        function _selectMoveDir(dirPath, row, icon) {
+            // Deselect previous
+            if (_selectedMoveRow) {
+                _selectedMoveRow.classList.remove('bg-amber-500/20', 'ring-1', 'ring-amber-500/40');
+                const prevIcon = _selectedMoveRow.querySelector('i.fa-folder-open');
+                if (prevIcon) prevIcon.className = 'fa-solid fa-folder text-amber-400/60 text-[11px] shrink-0';
+            }
+            _selectedMoveDir = dirPath;
+            _selectedMoveRow = row;
+            row.classList.add('bg-amber-500/20', 'ring-1', 'ring-amber-500/40');
+            icon.className = 'fa-solid fa-folder-open text-amber-400 text-[11px] shrink-0';
+
+            const fileName = currentEditableFilePath.split('/').pop();
+            const dest = dirPath ? dirPath + '/' + fileName : fileName;
+            document.getElementById('move-dest-input').value = dest;
+            document.getElementById('btn-confirm-move').disabled = (dest === currentEditableFilePath);
+        }
+
+        async function confirmMove() {
+            if (_selectedMoveDir === null && document.getElementById('move-dest-input').value === '') return;
+            const fileName = currentEditableFilePath.split('/').pop();
+            const destination = _selectedMoveDir ? _selectedMoveDir + '/' + fileName : fileName;
+
+            if (destination === currentEditableFilePath) {
+                alert('El destino coincide con el origen. Selecciona una carpeta diferente.');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('btn-confirm-move');
+            confirmBtn.disabled = true;
+            document.getElementById('btn-confirm-move-text').textContent = 'Moviendo...';
+
+            try {
+                const res = await fetch('/api/move-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: currentEditableFilePath, destination })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    currentEditableFilePath = data.new_path || destination;
+                    const pathDisplay = document.getElementById('editor-file-path');
+                    if (pathDisplay) pathDisplay.textContent = currentEditableFilePath;
+                    const statusMsg = document.getElementById('editor-status-msg');
+                    if (statusMsg) {
+                        statusMsg.textContent = `¡Movido a: ${currentEditableFilePath}`;
+                        statusMsg.className = 'text-xs font-semibold text-amber-400 truncate max-w-md';
+                    }
+                    closeMoveModal();
+                } else {
+                    alert(data.message || 'Error al mover el artículo.');
+                    confirmBtn.disabled = false;
+                    document.getElementById('btn-confirm-move-text').textContent = 'Mover aquí';
+                }
+            } catch (err) {
+                console.error('Error moving article:', err);
+                alert('Error de conexión al intentar mover.');
+                confirmBtn.disabled = false;
+                document.getElementById('btn-confirm-move-text').textContent = 'Mover aquí';
+            }
+        }
+
+        // ── Link Picker ──────────────────────────────────────────
+        let _allArticles = [];
+
+        async function openLinkPickerModal() {
+            const modal = document.getElementById('link-picker-modal');
+            // Escape the editor-drawer transform stacking context
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+            document.getElementById('link-search-input').value = '';
+            document.getElementById('link-articles-list').innerHTML =
+                '<div class="text-slate-500 py-6 text-center text-xs"><i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Cargando artículos...</div>';
+            modal.classList.remove('hidden');
+            document.getElementById('link-search-input').focus();
+
+            try {
+                const res = await fetch('/api/list-articles');
+                _allArticles = await res.json();
+                renderLinkArticles(_allArticles);
+            } catch (err) {
+                document.getElementById('link-articles-list').innerHTML =
+                    '<div class="text-rose-400 py-6 text-center text-xs"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Error al cargar artículos.</div>';
+            }
+        }
+
+        function closeLinkPickerModal() {
+            document.getElementById('link-picker-modal').classList.add('hidden');
+        }
+
+        function filterLinkArticles() {
+            const q = document.getElementById('link-search-input').value.toLowerCase();
+            const filtered = q
+                ? _allArticles.filter(a =>
+                    a.title.toLowerCase().includes(q) || a.url_path.toLowerCase().includes(q))
+                : _allArticles;
+            renderLinkArticles(filtered);
+        }
+
+        function renderLinkArticles(articles) {
+            const container = document.getElementById('link-articles-list');
+            if (!articles.length) {
+                container.innerHTML = '<div class="text-slate-500 py-4 text-center text-xs">No se encontraron artículos.</div>';
+                return;
+            }
+            container.innerHTML = articles.map(a => `
+                <button onclick="insertArticleLink('${escapeJs(a.url_path)}', '${escapeJs(a.title)}')"
+                    class="w-full text-left flex flex-col px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors duration-100 border border-transparent hover:border-slate-700/50 group">
+                    <span class="text-slate-200 text-xs font-medium group-hover:text-violet-300 transition-colors leading-snug">${escapeHtml(a.title)}</span>
+                    <span class="text-slate-500 text-[10px] font-mono mt-0.5">${escapeHtml(a.url_path)}</span>
+                </button>
+            `).join('');
+        }
+
+        function insertArticleLink(urlPath, title) {
+            const textarea = document.getElementById('editor-textarea');
+            if (!textarea) return;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            const linkText = selectedText || title;
+            const mdLink = `[${linkText}](${urlPath})`;
+            textarea.value = textarea.value.substring(0, start) + mdLink + textarea.value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + mdLink.length;
+            textarea.focus();
+            closeLinkPickerModal();
+            handleAutoSave();
+        }
+
         let autoSaveTimer = null;
         function handleAutoSave() {
             const statusMsg = document.getElementById('editor-status-msg');
@@ -1598,10 +2060,183 @@
                 .replace(/'/g, "&#039;");
         }
 
+        function insertImagePrompt() {
+            isUploadingThumbnail = false;
+            const modal = document.getElementById('image-upload-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.getElementById('clipboard-paste-area-container').classList.add('hidden');
+            }
+        }
+
+        function closeImageUploadModal() {
+            const modal = document.getElementById('image-upload-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            document.removeEventListener('paste', handleClipboardPaste);
+        }
+
+        function triggerFileImageSelect() {
+            isUploadingThumbnail = false;
+            const fileInput = document.getElementById('image-file-input');
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+
+        function triggerThumbnailSelect() {
+            isUploadingThumbnail = true;
+            console.log("triggerThumbnailSelect: isUploadingThumbnail set to true");
+            const fileInput = document.getElementById('image-file-input');
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+
+        function handleFileImageSelected(event) {
+            const file = event.target.files[0];
+            if (file) {
+                console.log("handleFileImageSelected: file selected, isUploadingThumbnail =", isUploadingThumbnail);
+                resizeAndUploadImage(file, false, isUploadingThumbnail);
+                closeImageUploadModal();
+            }
+            event.target.value = '';
+        }
+
+        function activateClipboardPasteMode() {
+            document.getElementById('clipboard-paste-area-container').classList.remove('hidden');
+            document.addEventListener('paste', handleClipboardPaste);
+        }
+
+        function handleClipboardPaste(event) {
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (const item of items) {
+                if (item.type.indexOf("image") === 0) {
+                    const blob = item.getAsFile();
+                    resizeAndUploadImage(blob, true);
+                    closeImageUploadModal();
+                    event.preventDefault();
+                    return;
+                }
+            }
+            alert("No se encontró ninguna imagen en el portapapeles. Copia una imagen/recorte e inténtalo de nuevo.");
+        }
+
+        function resizeAndUploadImage(fileOrBlob, isClipboard, isThumbnail = false) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    let base64Data;
+                    if (isClipboard) {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const targetWidth = 550;
+                        const scaleFactor = targetWidth / img.width;
+                        const targetHeight = img.height * scaleFactor;
+                        
+                        canvas.width = targetWidth;
+                        canvas.height = targetHeight;
+                        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                        base64Data = canvas.toDataURL('image/jpeg', 0.9);
+                    } else {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        base64Data = canvas.toDataURL('image/jpeg', 0.95);
+                    }
+                    uploadImageBackend(base64Data, isClipboard, isThumbnail);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(fileOrBlob);
+        }
+
+        async function uploadImageBackend(base64Data, isClipboard, isThumbnail = false) {
+            const statusMsg = document.getElementById('editor-status-msg');
+            if (statusMsg) {
+                statusMsg.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-1 text-emerald-400"></i> Guardando imagen...';
+                statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+            }
+            
+            try {
+                const res = await fetch('/api/upload-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_path: currentEditableFilePath,
+                        image: base64Data,
+                        is_clipboard: isClipboard,
+                        is_thumbnail: isThumbnail
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    if (isThumbnail) {
+                        if (statusMsg) {
+                            statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Thumbnail guardado como ${data.filename}`;
+                            statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                        }
+                        // Trigger autosave to force Hugo rebuild and refresh iframe view
+                        handleAutoSave();
+                    } else {
+                        insertImageToEditor(data.num, data.filename);
+                        if (statusMsg) {
+                            statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Imagen guardada como ${data.filename}`;
+                            statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                        }
+                    }
+                } else {
+                    if (statusMsg) {
+                        statusMsg.textContent = data.message || 'Error al guardar la imagen.';
+                        statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                    }
+                }
+            } catch (err) {
+                console.error("Error uploading image:", err);
+                if (statusMsg) {
+                    statusMsg.textContent = 'Error de conexión al subir la imagen.';
+                    statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                }
+            }
+        }
+
+        function insertImageToEditor(num, filename) {
+            const textarea = document.getElementById('editor-textarea');
+            if (!textarea) return;
+            
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+            const originalContent = textarea.value;
+            
+            const textToInsert = `![image-${num}]`;
+            const beforeCursor = originalContent.substring(0, startPos);
+            const afterCursor = originalContent.substring(endPos);
+            
+            let newContent = beforeCursor + textToInsert + afterCursor;
+            
+            const refLine = `\n[image-${num}]: /images/${filename}`;
+            if (!newContent.endsWith('\n')) {
+                newContent += '\n';
+            }
+            newContent += refLine;
+            
+            textarea.value = newContent;
+            
+            const newCursorPos = startPos + textToInsert.length;
+            textarea.selectionStart = newCursorPos;
+            textarea.selectionEnd = newCursorPos;
+            textarea.focus();
+            
+            handleAutoSave();
+        }
+
         // Use DOMContentLoaded instead of window.onload to prevent Slow-loading CDN assets from freezing the Javascript execution.
         document.addEventListener('DOMContentLoaded', init);
     </script>
-
 
 </body>
 </html>

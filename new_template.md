@@ -22,9 +22,11 @@ Escribe aquí el resumen de tu nuevo artículo...
 
 Escribe aquí el contenido de tu nuevo artículo...
 
+¡[image-01]
+
 ### Enlaces de interés
 - [enlace](www.sherblog.es)
 
 [link]: https://www.google.es
 
-[image-01]: /images/20260121_sherlocaster_01.jpg
+[image-01]: /images/20260121_{title}_01.jpg
