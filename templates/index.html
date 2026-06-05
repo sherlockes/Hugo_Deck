@@ -1130,7 +1130,7 @@
                     } else {
                         const iframe = document.getElementById('preview-iframe');
                         if (iframe) {
-                            iframe.src = `http://${window.location.hostname}:1313` + data.url_path;
+                            iframe.src = previewUrl + data.url_path;
                         }
                     }
                 } else {
@@ -1265,7 +1265,7 @@
         }
 
         function navigateAndViewDraft(urlPath) {
-            const fullUrl = `http://${window.location.hostname}:1313` + urlPath;
+            const fullUrl = previewUrl + urlPath;
             console.log("Draft Navigation - Attempting to load URL:", fullUrl);
             const iframe = document.getElementById('preview-iframe');
             if (iframe) {
@@ -1354,7 +1354,7 @@
                         // Navigate iframe to site root
                         const previewIframe = document.getElementById('preview-iframe');
                         if (previewIframe) {
-                            previewIframe.src = `http://${window.location.hostname}:1313/`;
+                            previewIframe.src = previewUrl + '/';
                         }
                     }, 800);
                 } else {
@@ -1657,7 +1657,7 @@
 
         // Initialize iframe source based on current host
         const iframe = document.getElementById('preview-iframe');
-        const previewUrl = `http://${window.location.hostname}:1313`;
+        let previewUrl = `${window.location.protocol}//${window.location.hostname}:1313`;
 
         async function init() {
             // Fetch initial config
@@ -1713,6 +1713,10 @@
                 document.getElementById('chk-drafts-future').checked = data.build_drafts_and_future;
                 updateDraftsTabVisibility();
                 githubTokenConfigured = data.github_token_configured || false;
+                
+                if (data.hugo_preview_url) {
+                    previewUrl = data.hugo_preview_url.replace(/\/$/, "");
+                }
 
                 // Extract repository name from URL (e.g. "sherlockes.github.io" from "https://github.com/sherlockes/sherlockes.github.io.git")
                 if (data.repo_url) {
@@ -1952,6 +1956,15 @@
                     body: JSON.stringify({ message: 'Update' })
                 });
                 const data = await res.json();
+
+                if (res.status === 401) {
+                    alert(data.message || 'Error de autenticación.');
+                    githubTokenConfigured = false;
+                    btn.disabled = false;
+                    btn.innerHTML = origContent;
+                    openPushModal();
+                    return;
+                }
 
                 if (res.ok && data.status === 'success') {
                     btn.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i> <span>Push OK!</span>';

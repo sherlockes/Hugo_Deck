@@ -1,11 +1,11 @@
 services:
   hugo-dev:
     build: .
-    container_name: hugo-deck
-    user: "${UID}:${GID}"
-    ports:
-      - "1313:1313"
-      - "1314:1314"
+    container_name: hugodeck
+    # 👤 Forzamos tus IDs directamente para evitar problemas con variables de entorno no declaradas
+    user: "1000:1000"
+    # 🔒 SECCIÓN PORTS ELIMINADA: Ya no se exponen al mundo. 
+    # Nginx hablará con ellos internamente a través de los puertos 1313 y 1314.
     environment:
       - REPO_URL=https://github.com/sherlockes/sherlockes.github.io.git
     volumes:
@@ -17,3 +17,9 @@ services:
       - ./.env:/site/.env
       - ./new_template.md:/site/new_template.md
     restart: unless-stopped
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true

@@ -11,6 +11,24 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 REPO_URL = os.environ.get("REPO_URL", "https://github.com/sherlockes/sherlockes.github.io.git")
 REPO_DIR = "/site/repo"
+
+HUGO_PREVIEW_URL = os.environ.get("HUGO_PREVIEW_URL", "").strip()
+if not HUGO_PREVIEW_URL:
+    for env_path in [".env", "../.env", "/site/.env", "/app/.env"]:
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, "r") as f:
+                    for line in f:
+                        if line.strip().startswith("HUGO_PREVIEW_URL="):
+                            val = line.split("=", 1)[1].strip().replace('"', '').replace("'", "")
+                            if val:
+                                HUGO_PREVIEW_URL = val
+                            break
+            except:
+                pass
+            if HUGO_PREVIEW_URL:
+                break
+
 LOGS_BUFFER = []
 MAX_LOGS = 300
 hugo_proc = None
@@ -851,13 +869,14 @@ def start_hugo_internal(host_ip=None):
         "build_time": "N/A"
     }
     
-    add_log(f"🚀 Launching Hugo Server (Borradores y Futuros: {'SÍ' if build_drafts_and_future else 'NO'}) on baseURL http://{host_ip}:1313...")
+    base_url = HUGO_PREVIEW_URL if HUGO_PREVIEW_URL else f"http://{host_ip}:1313"
+    add_log(f"🚀 Launching Hugo Server (Borradores y Futuros: {'SÍ' if build_drafts_and_future else 'NO'}) on baseURL {base_url}...")
     try:
         cmd = [
             "hugo", "server",
             "--disableFastRender",
             "--bind", "0.0.0.0",
-            "--baseURL", f"http://{host_ip}:1313",
+            "--baseURL", base_url,
             "--navigateToChanged"
         ]
         if build_drafts_and_future:
@@ -946,7 +965,8 @@ def config():
     return jsonify({
         "build_drafts_and_future": build_drafts_and_future, 
         "repo_url": REPO_URL,
-        "github_token_configured": has_token
+        "github_token_configured": has_token,
+        "hugo_preview_url": HUGO_PREVIEW_URL
     })
 
 @app.route("/api/status")
@@ -1116,7 +1136,7 @@ def git_push():
         else:
             err_msg = push_res.stderr.strip() or push_res.stdout.strip()
             add_log(f"❌ Error al hacer Git Push: {err_msg}")
-            if "Authentication failed" in err_msg or "could not read Username" in err_msg:
+            if any(phrase in err_msg for phrase in ["Authentication failed", "could not read Username", "could not read Password", "terminal prompts disabled"]):
                 return jsonify({
                     "status": "error", 
                     "message": "Error de autenticación. Por favor, introduce un Token de Acceso Personal (PAT) válido de GitHub."
