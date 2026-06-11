@@ -26,7 +26,8 @@ while true; do
     --disableFastRender \
     --bind 0.0.0.0 \
     --baseURL http://localhost:1313 \
-    --navigateToChanged
+    --navigateToChanged \
+    --poll 700ms
 
   EXIT_CODE=$?
   echo ">>> Hugo se ha parado con código $EXIT_CODE. Reiniciando en 2s..."

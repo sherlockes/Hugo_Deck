@@ -226,7 +226,7 @@
             <button onclick="refreshIframe()" class="text-slate-400 hover:text-white p-2 rounded-lg bg-slate-800/40 hover:bg-slate-800 border border-slate-700/30 transition-all duration-150" title="Refrescar Vista Previa">
                 <i class="fa-solid fa-rotate"></i>
             </button>
-            <button onclick="toggleTerminal()" class="flex items-center space-x-2 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white px-4 py-1.5 rounded-lg border border-slate-700/50 transition-all duration-150 text-sm font-medium">
+            <button onclick="toggleTerminal(true)" class="flex items-center space-x-2 bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-white px-4 py-1.5 rounded-lg border border-slate-700/50 transition-all duration-150 text-sm font-medium">
                 <i class="fa-solid fa-terminal text-xs"></i>
                 <span>Logs</span>
                 <span id="log-badge" class="h-2 w-2 rounded-full bg-emerald-400"></span>
@@ -288,9 +288,22 @@
                         <i class="fa-solid fa-pen-to-square text-emerald-400"></i>
                         <span>Editor de Artículo</span>
                     </h3>
-                    <p id="editor-file-path" class="text-[10px] font-mono text-slate-400 truncate mt-0.5 max-w-[400px]"></p>
+                    <p id="editor-file-path" class="text-[10px] font-mono text-slate-400 truncate mt-0.5 max-w-[350px]"></p>
+                    <div id="editor-status-msg" class="text-[10px] font-semibold text-slate-400 truncate mt-0.5 max-w-[350px]"></div>
                 </div>
                 <div class="flex items-center space-x-1">
+                    <button onclick="openLinkPickerModal()" id="btn-editor-link" class="text-slate-400 hover:text-violet-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-violet-500/10" title="Insertar enlace a otro artículo del repo">
+                        <i class="fa-solid fa-link text-sm"></i>
+                    </button>
+                    <button onclick="insertImagePrompt()" id="btn-editor-insert-image" class="text-slate-400 hover:text-emerald-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-emerald-500/10" title="Insertar imagen">
+                        <i class="fa-solid fa-image text-sm"></i>
+                    </button>
+                    <button onclick="moveArticle()" id="btn-editor-move" class="text-slate-400 hover:text-amber-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-amber-500/10" title="Mover este artículo a otra ubicación">
+                        <i class="fa-solid fa-folder-open text-sm"></i>
+                    </button>
+                    <button onclick="saveEditedFile()" id="btn-editor-save" class="text-slate-400 hover:text-emerald-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-emerald-500/10" title="Guardar cambios">
+                        <span id="editor-save-btn-text"><i class="fa-solid fa-floppy-disk text-sm"></i></span>
+                    </button>
                     <button onclick="deleteArticle()" id="btn-editor-delete" class="text-slate-500 hover:text-rose-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-rose-500/10" title="Eliminar artículo permanentemente">
                         <i class="fa-solid fa-trash text-sm"></i>
                     </button>
@@ -301,34 +314,8 @@
             </div>
 
             <!-- Drawer Body (Markdown Textarea) -->
-            <div class="grow flex flex-col p-6 min-h-0">
-                <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
-                    Contenido (Markdown)
-                </label>
+            <div class="grow flex flex-col p-4 min-h-0">
                 <textarea id="editor-textarea" class="grow w-full bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none overflow-y-auto custom-scrollbar leading-relaxed" placeholder="Escribe aquí tu contenido en Markdown..."></textarea>
-            </div>
-
-            <!-- Drawer Footer -->
-            <div class="flex flex-col px-6 py-4 bg-slate-950/40 border-t border-slate-800 shrink-0 space-y-3">
-                <div id="editor-status-msg" class="text-xs font-medium text-slate-400 truncate max-w-md"></div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="openLinkPickerModal()" id="btn-editor-link" class="flex-1 bg-slate-700/50 hover:bg-violet-500/20 text-slate-400 hover:text-violet-300 font-medium py-2 px-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5 border border-slate-700/40 hover:border-violet-500/40" title="Insertar enlace a otro artículo del repo">
-                        <i class="fa-solid fa-link"></i>
-                        <span>Enlace</span>
-                    </button>
-                    <button onclick="moveArticle()" id="btn-editor-move" class="flex-1 bg-amber-500/15 hover:bg-amber-500 text-amber-400 hover:text-slate-950 font-medium py-2 px-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5 border border-amber-500/30 hover:border-amber-500" title="Mover este artículo a otra ubicación">
-                        <i class="fa-solid fa-folder-open"></i>
-                        <span>Mover</span>
-                    </button>
-                    <button onclick="insertImagePrompt()" id="btn-editor-insert-image" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2 px-2 rounded-lg text-xs transition flex items-center justify-center space-x-1.5">
-                        <i class="fa-solid fa-image"></i>
-                        <span>Imagen</span>
-                    </button>
-                    <button onclick="saveEditedFile()" id="btn-editor-save" class="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium py-2 px-2 rounded-lg text-xs shadow-lg hover:shadow-emerald-900/30 transition flex items-center justify-center space-x-1.5">
-                        <i class="fa-solid fa-floppy-disk"></i>
-                        <span id="editor-save-btn-text">Guardar</span>
-                    </button>
-                </div>
             </div>
         </div>
         
@@ -340,14 +327,25 @@
                         <div class="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
                             <i class="fa-solid fa-image text-emerald-400"></i>
                         </div>
-                        <h3 class="text-base font-bold text-slate-100">Insertar Imagen</h3>
+                        <h3 class="text-base font-bold text-slate-100">Insertar o Modificar Imagen</h3>
                     </div>
                     <button onclick="closeImageUploadModal()" class="text-slate-400 hover:text-white transition-colors duration-150">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
                 
-                <p class="text-slate-400 text-xs mb-6">Selecciona cómo deseas incluir la imagen en el artículo actual o actualizar el thumbnail de portada.</p>
+                <p class="text-slate-400 text-xs mb-4">Selecciona cómo deseas incluir la imagen en el artículo actual o actualizar el thumbnail de portada.</p>
+                
+                <!-- Overwrite selection dropdown -->
+                <div class="mb-5 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+                    <label class="block text-[10px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+                        ¿Deseas modificar una imagen existente en este artículo?
+                    </label>
+                    <select id="image-overwrite-select" onchange="handleOverwriteSelectChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <option value="">-- Insertar como nueva imagen --</option>
+                    </select>
+                    <p class="text-[9px] text-slate-500 mt-1.5 leading-relaxed">Si seleccionas una imagen existente, los botones "Desde Archivo" y "Del Portapapeles" sobreescribirán su archivo físico en el servidor manteniendo la etiqueta en el texto intacta.</p>
+                </div>
                 
                 <div class="grid grid-cols-3 gap-4 pb-1">
                     <!-- From File Button -->
@@ -369,7 +367,7 @@
                     </button>
 
                     <!-- From Thumbnail Button -->
-                    <button onclick="triggerThumbnailSelect()" class="flex flex-col items-center justify-center p-5 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl transition duration-150 group" title="Subir imagen *.jpg de portada para el artículo actual, sobreescribiendo el archivo _00.jpg">
+                    <button id="btn-upload-thumbnail" onclick="triggerThumbnailSelect()" class="flex flex-col items-center justify-center p-5 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 rounded-xl transition duration-150 group" title="Subir imagen *.jpg de portada para el artículo actual, sobreescribiendo el archivo _00.jpg">
                         <div class="h-12 w-12 rounded-full bg-amber-500/10 border border-amber-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition duration-150">
                             <i class="fa-solid fa-image text-lg text-amber-400"></i>
                         </div>
@@ -421,7 +419,7 @@
                 <i class="fa-solid fa-circle text-[10px] text-green-500"></i>
                 <span class="ml-2">hugo-server.log</span>
             </div>
-            <button onclick="toggleTerminal()" class="text-slate-400 hover:text-white transition-colors duration-150">
+            <button onclick="toggleTerminal(true)" class="text-slate-400 hover:text-white transition-colors duration-150">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -746,6 +744,7 @@
 
     <script>
         let isTerminalOpen = false;
+        let isTerminalAutoOpened = false;
         let lastLogCount = 0;
         let isServerOnline = false;
         let currentEditableFilePath = '';
@@ -1107,10 +1106,14 @@
                     if (pathDisplay) pathDisplay.textContent = data.file_path;
                     if (statusMsg) {
                         statusMsg.textContent = '¡Borrador creado con éxito!';
-                        statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                        statusMsg.className = 'text-[10px] font-semibold text-emerald-400 truncate mt-0.5 max-w-[350px]';
                     }
-                    if (saveBtnText) saveBtnText.textContent = 'Guardar';
-                    document.getElementById('btn-editor-save').disabled = false;
+                    if (saveBtnText) saveBtnText.innerHTML = '<i class="fa-solid fa-floppy-disk text-sm"></i>';
+                    const saveBtn = document.getElementById('btn-editor-save');
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.title = "Guardar cambios";
+                    }
 
                     if (drawer) {
                         drawer.classList.remove('editor-closed');
@@ -1158,9 +1161,13 @@
             const drawer = document.getElementById('editor-drawer');
 
             statusMsg.textContent = '';
-            statusMsg.className = 'text-xs font-medium text-slate-400 truncate max-w-md';
-            saveBtnText.textContent = 'Guardar';
-            document.getElementById('btn-editor-save').disabled = false;
+            statusMsg.className = 'text-[10px] font-semibold text-slate-400 truncate mt-0.5 max-w-[350px]';
+            if (saveBtnText) saveBtnText.innerHTML = '<i class="fa-solid fa-floppy-disk text-sm"></i>';
+            const saveBtn = document.getElementById('btn-editor-save');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.title = "Guardar cambios";
+            }
 
             try {
                 const res = await fetch(`/api/edit-info?path=${encodeURIComponent(currentEditablePath)}`);
@@ -1282,7 +1289,8 @@
             const saveBtnText = document.getElementById('editor-save-btn-text');
 
             saveBtn.disabled = true;
-            saveBtnText.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Guardando...';
+            saveBtn.title = "Guardando...";
+            saveBtnText.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin text-sm text-emerald-400"></i>';
             statusMsg.textContent = '';
 
             try {
@@ -1295,8 +1303,9 @@
 
                 if (res.ok && data.status === 'success') {
                     statusMsg.textContent = '¡Guardado con éxito! Recompilando...';
-                    statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
-                    saveBtnText.textContent = '¡Guardado!';
+                    statusMsg.className = 'text-[10px] font-semibold text-emerald-400 truncate mt-0.5 max-w-[350px]';
+                    saveBtn.title = "¡Guardado con éxito!";
+                    saveBtnText.innerHTML = '<i class="fa-solid fa-circle-check text-sm text-emerald-400"></i>';
                     
                     const termBody = document.getElementById('terminal-body');
                     termBody.innerHTML += `<div class="text-emerald-400">[Control] Artículo guardado con éxito. Esperando Live Reload...</div>`;
@@ -1307,15 +1316,17 @@
                     }, 1000);
                 } else {
                     statusMsg.textContent = data.message || 'Error al intentar guardar.';
-                    statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
-                    saveBtnText.textContent = 'Reintentar';
+                    statusMsg.className = 'text-[10px] font-semibold text-rose-400 truncate mt-0.5 max-w-[350px]';
+                    saveBtn.title = "Error al guardar. Reintentar.";
+                    saveBtnText.innerHTML = '<i class="fa-solid fa-floppy-disk text-sm text-rose-400"></i>';
                     saveBtn.disabled = false;
                 }
             } catch (err) {
                 console.error("Error saving file:", err);
                 statusMsg.textContent = 'Error de conexión con el servidor.';
-                statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
-                saveBtnText.textContent = 'Reintentar';
+                statusMsg.className = 'text-[10px] font-semibold text-rose-400 truncate mt-0.5 max-w-[350px]';
+                saveBtn.title = "Error de conexión. Reintentar.";
+                saveBtnText.innerHTML = '<i class="fa-solid fa-floppy-disk text-sm text-rose-400"></i>';
                 saveBtn.disabled = false;
             }
         }
@@ -1792,6 +1803,17 @@
                         setTimeout(() => {
                             iframe.src = previewUrl;
                         }, 800);
+
+                        // Auto-close terminal drawer if it was auto-opened and has no errors/warnings
+                        if (isTerminalAutoOpened) {
+                            setTimeout(() => {
+                                const logsBody = document.getElementById('terminal-body').innerHTML;
+                                const hasErrorOrWarning = logsBody.includes('text-red-400') || logsBody.includes('text-amber-400') || logsBody.includes('ERROR') || logsBody.includes('Failed') || logsBody.includes('WARN');
+                                if (!hasErrorOrWarning && isTerminalOpen) {
+                                    toggleTerminal();
+                                }
+                            }, 1500);
+                        }
                     }
                 } else {
                     statusLed.className = 'h-2.5 w-2.5 rounded-full led-red';
@@ -1880,6 +1902,7 @@
                 
                 if (action === 'start' || action === 'restart') {
                     if (!isTerminalOpen) {
+                        isTerminalAutoOpened = true;
                         toggleTerminal(); // Auto open terminal to show progress
                     }
                 }
@@ -1888,16 +1911,20 @@
             }
         }
 
-        function toggleTerminal() {
+        function toggleTerminal(isManual = false) {
             const drawer = document.getElementById('terminal-drawer');
             isTerminalOpen = !isTerminalOpen;
             
             if (isTerminalOpen) {
                 drawer.classList.remove('terminal-closed');
                 drawer.classList.add('terminal-open');
+                if (isManual) {
+                    isTerminalAutoOpened = false;
+                }
             } else {
                 drawer.classList.remove('terminal-open');
                 drawer.classList.add('terminal-closed');
+                isTerminalAutoOpened = false;
             }
         }
 
@@ -1946,6 +1973,7 @@
             btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin text-xs"></i> <span>Pushing...</span>';
 
             if (!isTerminalOpen) {
+                isTerminalAutoOpened = true;
                 toggleTerminal();
             }
 
@@ -1972,6 +2000,16 @@
                         btn.disabled = false;
                         btn.innerHTML = origContent;
                     }, 3000);
+
+                    if (isTerminalAutoOpened) {
+                        setTimeout(() => {
+                            const logsBody = document.getElementById('terminal-body').innerHTML;
+                            const hasErrorOrWarning = logsBody.includes('text-red-400') || logsBody.includes('text-amber-400') || logsBody.includes('ERROR') || logsBody.includes('Failed') || logsBody.includes('WARN');
+                            if (!hasErrorOrWarning && isTerminalOpen) {
+                                toggleTerminal();
+                            }
+                        }, 2500);
+                    }
                 } else if (data.status === 'warning') {
                     alert(data.message);
                     btn.disabled = false;
@@ -2019,6 +2057,7 @@
             btnText.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Haciendo Push...';
 
             if (!isTerminalOpen) {
+                isTerminalAutoOpened = true;
                 toggleTerminal(); // Auto open terminal to show push logs progress
             }
 
@@ -2038,7 +2077,7 @@
                         confirmBtn.disabled = false;
                         cancelBtn.disabled = false;
                     } else {
-                        succDiv.textContent = data.message;
+                        succDiv.textContent = '¡Cambios subidos con éxito!';
                         succDiv.classList.remove('hidden');
                         btnText.textContent = '¡Completado!';
                         if (token) {
@@ -2047,6 +2086,16 @@
                         setTimeout(() => {
                             closePushModal();
                         }, 2000);
+
+                        if (isTerminalAutoOpened) {
+                            setTimeout(() => {
+                                const logsBody = document.getElementById('terminal-body').innerHTML;
+                                const hasErrorOrWarning = logsBody.includes('text-red-400') || logsBody.includes('text-amber-400') || logsBody.includes('ERROR') || logsBody.includes('Failed') || logsBody.includes('WARN');
+                                if (!hasErrorOrWarning && isTerminalOpen) {
+                                    toggleTerminal();
+                                }
+                            }, 2500);
+                        }
                     }
                 } else {
                     errDiv.textContent = data.message || 'Error al intentar subir los cambios.';
@@ -2075,10 +2124,73 @@
 
         function insertImagePrompt() {
             isUploadingThumbnail = false;
+            
+            // Populate image dropdown list
+            const textarea = document.getElementById('editor-textarea');
+            const select = document.getElementById('image-overwrite-select');
+            if (textarea && select) {
+                // Clear previous options except the first one
+                select.innerHTML = '<option value="">-- Insertar como nueva imagen --</option>';
+                
+                const text = textarea.value;
+                const seen = new Set();
+                
+                // 1. Reference style images: [image-X]: /images/filename.jpg
+                const refRegex = /^\[(image-\d+|[^\]]+)\]:\s*\/images\/([^\s\n]+)/gm;
+                let match;
+                while ((match = refRegex.exec(text)) !== null) {
+                    const ref = match[1];
+                    const filename = match[2];
+                    const key = ref + "||" + filename;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        const opt = document.createElement('option');
+                        opt.value = filename;
+                        opt.textContent = `[${ref}] (Referencia: ${filename})`;
+                        select.appendChild(opt);
+                    }
+                }
+                
+                // 2. Inline style images: ![alt](/images/filename.jpg)
+                const inlineRegex = /!\[([^\]]*)\]\(\/images\/([^\s\n\)]+)\)/g;
+                while ((match = inlineRegex.exec(text)) !== null) {
+                    const ref = match[1] || "Imagen inline";
+                    const filename = match[2];
+                    const key = ref + "||" + filename;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        const opt = document.createElement('option');
+                        opt.value = filename;
+                        opt.textContent = `${ref} (Inline: ${filename})`;
+                        select.appendChild(opt);
+                    }
+                }
+                
+                // Reset select value
+                select.value = "";
+                handleOverwriteSelectChange();
+            }
+
             const modal = document.getElementById('image-upload-modal');
             if (modal) {
                 modal.classList.remove('hidden');
                 document.getElementById('clipboard-paste-area-container').classList.add('hidden');
+            }
+        }
+
+        function handleOverwriteSelectChange() {
+            const select = document.getElementById('image-overwrite-select');
+            const thumbBtn = document.getElementById('btn-upload-thumbnail');
+            if (select && thumbBtn) {
+                if (select.value !== "") {
+                    // Disable thumbnail upload
+                    thumbBtn.disabled = true;
+                    thumbBtn.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                } else {
+                    // Enable thumbnail upload
+                    thumbBtn.disabled = false;
+                    thumbBtn.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                }
             }
         }
 
@@ -2109,9 +2221,11 @@
 
         function handleFileImageSelected(event) {
             const file = event.target.files[0];
+            const select = document.getElementById('image-overwrite-select');
+            const overwriteFilename = select ? select.value : "";
             if (file) {
-                console.log("handleFileImageSelected: file selected, isUploadingThumbnail =", isUploadingThumbnail);
-                resizeAndUploadImage(file, false, isUploadingThumbnail);
+                console.log("handleFileImageSelected: file selected, isUploadingThumbnail =", isUploadingThumbnail, "overwriteFilename =", overwriteFilename);
+                resizeAndUploadImage(file, false, isUploadingThumbnail, overwriteFilename);
                 closeImageUploadModal();
             }
             event.target.value = '';
@@ -2124,10 +2238,12 @@
 
         function handleClipboardPaste(event) {
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            const select = document.getElementById('image-overwrite-select');
+            const overwriteFilename = select ? select.value : "";
             for (const item of items) {
                 if (item.type.indexOf("image") === 0) {
                     const blob = item.getAsFile();
-                    resizeAndUploadImage(blob, true);
+                    resizeAndUploadImage(blob, true, false, overwriteFilename);
                     closeImageUploadModal();
                     event.preventDefault();
                     return;
@@ -2136,7 +2252,7 @@
             alert("No se encontró ninguna imagen en el portapapeles. Copia una imagen/recorte e inténtalo de nuevo.");
         }
 
-        function resizeAndUploadImage(fileOrBlob, isClipboard, isThumbnail = false) {
+        function resizeAndUploadImage(fileOrBlob, isClipboard, isThumbnail = false, overwriteFilename = "") {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
@@ -2161,18 +2277,18 @@
                         ctx.drawImage(img, 0, 0);
                         base64Data = canvas.toDataURL('image/jpeg', 0.95);
                     }
-                    uploadImageBackend(base64Data, isClipboard, isThumbnail);
+                    uploadImageBackend(base64Data, isClipboard, isThumbnail, overwriteFilename);
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(fileOrBlob);
         }
 
-        async function uploadImageBackend(base64Data, isClipboard, isThumbnail = false) {
+        async function uploadImageBackend(base64Data, isClipboard, isThumbnail = false, overwriteFilename = "") {
             const statusMsg = document.getElementById('editor-status-msg');
             if (statusMsg) {
                 statusMsg.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-1 text-emerald-400"></i> Guardando imagen...';
-                statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                statusMsg.className = 'text-[10px] font-semibold text-emerald-400 truncate mt-0.5 max-w-[350px]';
             }
             
             try {
@@ -2183,7 +2299,8 @@
                         file_path: currentEditableFilePath,
                         image: base64Data,
                         is_clipboard: isClipboard,
-                        is_thumbnail: isThumbnail
+                        is_thumbnail: isThumbnail,
+                        overwrite_filename: overwriteFilename
                     })
                 });
                 const data = await res.json();
@@ -2191,7 +2308,14 @@
                     if (isThumbnail) {
                         if (statusMsg) {
                             statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Thumbnail guardado como ${data.filename}`;
-                            statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                            statusMsg.className = 'text-[10px] font-semibold text-emerald-400 truncate mt-0.5 max-w-[350px]';
+                        }
+                        // Trigger autosave to force Hugo rebuild and refresh iframe view
+                        handleAutoSave();
+                    } else if (data.overwritten) {
+                        if (statusMsg) {
+                            statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Imagen ${data.filename} modificada con éxito`;
+                            statusMsg.className = 'text-[10px] font-semibold text-emerald-400 truncate mt-0.5 max-w-[350px]';
                         }
                         // Trigger autosave to force Hugo rebuild and refresh iframe view
                         handleAutoSave();
@@ -2199,20 +2323,20 @@
                         insertImageToEditor(data.num, data.filename);
                         if (statusMsg) {
                             statusMsg.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Imagen guardada como ${data.filename}`;
-                            statusMsg.className = 'text-xs font-semibold text-emerald-400 truncate max-w-md';
+                            statusMsg.className = 'text-[10px] font-semibold text-emerald-400 truncate mt-0.5 max-w-[350px]';
                         }
                     }
                 } else {
                     if (statusMsg) {
                         statusMsg.textContent = data.message || 'Error al guardar la imagen.';
-                        statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                        statusMsg.className = 'text-[10px] font-semibold text-rose-400 truncate mt-0.5 max-w-[350px]';
                     }
                 }
             } catch (err) {
                 console.error("Error uploading image:", err);
                 if (statusMsg) {
                     statusMsg.textContent = 'Error de conexión al subir la imagen.';
-                    statusMsg.className = 'text-xs font-semibold text-rose-400 truncate max-w-md';
+                    statusMsg.className = 'text-[10px] font-semibold text-rose-400 truncate mt-0.5 max-w-[350px]';
                 }
             }
         }

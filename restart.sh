@@ -29,6 +29,7 @@ hugo server \
   --bind 0.0.0.0 \
   --baseURL http://localhost:1313 \
   --navigateToChanged \
+  --poll 700ms \
   2>&1 | tee /proc/1/fd/1 &
 
 NEW_PID=$!

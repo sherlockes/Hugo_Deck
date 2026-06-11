@@ -412,9 +412,10 @@ def upload_image():
     image_b64 = data.get("image", "")
     is_clipboard = data.get("is_clipboard", False)
     is_thumbnail = data.get("is_thumbnail", False)
+    overwrite_filename = data.get("overwrite_filename", "").strip()
     if isinstance(is_thumbnail, str):
         is_thumbnail = is_thumbnail.lower() in ("true", "1", "yes")
-    add_log(f"📸 Procesando subida de imagen (is_thumbnail={is_thumbnail})")
+    add_log(f"📸 Procesando subida de imagen (is_thumbnail={is_thumbnail}, overwrite_filename={overwrite_filename})")
     
     if not file_path:
         return jsonify({"status": "error", "message": "Falta la ruta del artículo."}), 400
@@ -468,7 +469,11 @@ def upload_image():
         add_log(f"❌ Error al crear directorio de imágenes: {e}")
         return jsonify({"status": "error", "message": "No se pudo crear el directorio de imágenes."}), 500
         
-    if is_thumbnail:
+    if overwrite_filename:
+        num_str = ""
+        candidate_name = os.path.basename(overwrite_filename)
+        candidate_path = os.path.join(images_dir, candidate_name)
+    elif is_thumbnail:
         num_str = "00"
         candidate_name = f"{date_str}_{slug}_00.jpg"
         candidate_path = os.path.join(images_dir, candidate_name)
@@ -492,12 +497,20 @@ def upload_image():
         with open(candidate_path, "wb") as img_file:
             img_file.write(image_bytes)
             
-        add_log(f"📸 Guardada nueva imagen: {candidate_name} ({'Portapapeles' if is_clipboard else 'Archivo'})")
-        return jsonify({
-            "status": "success",
-            "num": num_str,
-            "filename": candidate_name
-        })
+        if overwrite_filename:
+            add_log(f"📸 Sobreescrita imagen existente: {candidate_name} ({'Portapapeles' if is_clipboard else 'Archivo'})")
+            return jsonify({
+                "status": "success",
+                "filename": candidate_name,
+                "overwritten": True
+            })
+        else:
+            add_log(f"📸 Guardada nueva imagen: {candidate_name} ({'Portapapeles' if is_clipboard else 'Archivo'})")
+            return jsonify({
+                "status": "success",
+                "num": num_str,
+                "filename": candidate_name
+            })
     except Exception as e:
         add_log(f"❌ Error al guardar la imagen {candidate_name}: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -877,8 +890,22 @@ def start_hugo_internal(host_ip=None):
             "--disableFastRender",
             "--bind", "0.0.0.0",
             "--baseURL", base_url,
-            "--navigateToChanged"
+            "--navigateToChanged",
+            "--poll", "700ms"
         ]
+        
+        # Check if we are running behind a proxy with standard ports (80/443)
+        import urllib.parse
+        parsed_url = urllib.parse.urlparse(base_url)
+        if parsed_url.scheme in ("http", "https"):
+            netloc_parts = parsed_url.netloc.split(":")
+            has_custom_port = len(netloc_parts) > 1 and netloc_parts[1] not in ("80", "443")
+            if not has_custom_port and parsed_url.hostname not in ("localhost", "127.0.0.1", "0.0.0.0"):
+                cmd.append("--appendPort=false")
+                lr_port = "443" if parsed_url.scheme == "https" else "80"
+                cmd.extend(["--liveReloadPort", lr_port])
+                add_log(f"Proxy detected. Adding --appendPort=false and --liveReloadPort={lr_port}")
+
         if build_drafts_and_future:
             cmd.append("--buildDrafts")
             cmd.append("--buildFuture")
