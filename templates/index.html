@@ -298,6 +298,12 @@
                     <button onclick="insertImagePrompt()" id="btn-editor-insert-image" class="text-slate-400 hover:text-emerald-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-emerald-500/10" title="Insertar imagen">
                         <i class="fa-solid fa-image text-sm"></i>
                     </button>
+                    <button onclick="openRemoteTextModal()" id="btn-editor-remote-text" class="text-slate-400 hover:text-sky-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-sky-500/10" title="Insertar texto remoto (shortcode)">
+                        <i class="fa-solid fa-file-lines text-sm"></i>
+                    </button>
+                    <button onclick="openThumbnailGeneratorModal()" id="btn-editor-generate-thumbnail" class="text-slate-400 hover:text-amber-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-amber-500/10" title="Generar portada/thumbnail del artículo con IA">
+                        <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                    </button>
                     <button onclick="moveArticle()" id="btn-editor-move" class="text-slate-400 hover:text-amber-400 transition-colors duration-150 p-1.5 rounded-lg hover:bg-amber-500/10" title="Mover este artículo a otra ubicación">
                         <i class="fa-solid fa-folder-open text-sm"></i>
                     </button>
@@ -737,6 +743,123 @@
             <div id="link-articles-list" class="mx-6 mb-6 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl p-2 custom-scrollbar flex flex-col space-y-0.5" style="min-height: 160px; max-height: 45vh;">
                 <div class="text-slate-500 py-6 text-center text-xs">
                     <i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Cargando artículos...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REMOTE TEXT MODAL -->
+    <div id="remote-text-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="h-10 w-10 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-file-lines text-sky-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100">Insertar Texto Remoto</h3>
+                        <p class="text-[10px] text-slate-500 font-medium">Inserta un shortcode de texto remoto en la posición del cursor</p>
+                    </div>
+                </div>
+                <button onclick="closeRemoteTextModal()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1.5 rounded-lg hover:bg-slate-800 shrink-0">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Content / Input -->
+            <div class="p-6 flex flex-col space-y-4">
+                <div>
+                    <label for="remote-text-url" class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+                        URL del Archivo Remoto
+                    </label>
+                    <input type="url" id="remote-text-url" placeholder="https://ejemplo.com/archivo.txt" onkeydown="if(event.key === 'Enter') submitRemoteText()"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition">
+                </div>
+                
+                <div class="flex flex-col space-y-3 pt-1">
+                    <!-- Checkbox for Word Wrap -->
+                    <div class="flex items-center space-x-2.5">
+                        <input type="checkbox" id="remote-text-wrap" class="w-4 h-4 rounded border-slate-800 bg-slate-950 text-sky-500 focus:ring-sky-500 focus:ring-opacity-25 transition">
+                        <label for="remote-text-wrap" class="text-xs font-medium text-slate-300 select-none cursor-pointer">
+                            Forzar ajuste de línea (Word Wrap)
+                        </label>
+                    </div>
+                    <!-- Checkbox for Markdown Render -->
+                    <div class="flex items-center space-x-2.5">
+                        <input type="checkbox" id="remote-text-markdown" class="w-4 h-4 rounded border-slate-800 bg-slate-950 text-sky-500 focus:ring-sky-500 focus:ring-opacity-25 transition">
+                        <label for="remote-text-markdown" class="text-xs font-medium text-slate-300 select-none cursor-pointer">
+                            Renderizar Markdown como HTML
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer / Actions -->
+            <div class="flex items-center justify-end space-x-3 px-6 py-4 bg-slate-950/40 border-t border-slate-800 shrink-0 rounded-b-2xl">
+                <button onclick="closeRemoteTextModal()" class="bg-slate-800 hover:bg-slate-750 text-slate-300 font-medium py-1.5 px-4 rounded-lg text-xs transition">
+                    Cancelar
+                </button>
+                <button onclick="submitRemoteText()" class="bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-medium py-1.5 px-5 rounded-lg text-xs shadow-lg hover:shadow-sky-900/30 transition flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Insertar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- THUMBNAIL GENERATOR MODAL -->
+    <div id="thumbnail-generator-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 shrink-0">
+                <div class="flex items-center space-x-3">
+                    <div class="h-10 w-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100">Generador de Portada (AI)</h3>
+                        <p class="text-[10px] text-slate-500 font-medium">Genera una portada de 300x300px usando el contenido del post</p>
+                    </div>
+                </div>
+                <button onclick="closeThumbnailGeneratorModal()" class="text-slate-400 hover:text-white transition-colors duration-150 p-1.5 rounded-lg hover:bg-slate-800 shrink-0">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 flex flex-col space-y-4">
+                <!-- Custom Title Override -->
+                <div>
+                    <label for="thumbnail-title-input" class="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
+                        Texto/Título para la portada (Opcional)
+                    </label>
+                    <input type="text" id="thumbnail-title-input" placeholder="Por defecto se usará el título del artículo..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition" />
+                </div>
+                
+                <!-- Preview and status -->
+                <div class="flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-xl p-6 bg-slate-950/40 min-h-[220px] relative">
+                    <div id="thumbnail-preview-container" class="w-[180px] h-[180px] bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center overflow-hidden shadow-inner">
+                        <span class="text-slate-600 text-xs text-center px-4"><i class="fa-solid fa-image text-2xl mb-2 block"></i>Previsualización</span>
+                    </div>
+                    <div id="thumbnail-generator-status" class="text-[11px] font-medium text-slate-400 mt-4 text-center min-h-[16px]"></div>
+                </div>
+            </div>
+
+            <!-- Footer / Actions -->
+            <div class="flex items-center justify-between px-6 py-4 bg-slate-950/40 border-t border-slate-800 shrink-0 rounded-b-2xl">
+                <div class="text-[9px] text-slate-500 leading-relaxed max-w-[180px]">
+                    Se aplicará la plantilla <code class="bg-slate-900 px-1 py-0.5 rounded text-amber-500">thumbnail_overlay.png</code>.
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="closeThumbnailGeneratorModal()" class="bg-slate-800 hover:bg-slate-750 text-slate-300 font-medium py-1.5 px-4 rounded-lg text-xs transition">
+                        Cerrar
+                    </button>
+                    <button onclick="generateThumbnailAI()" id="btn-generate-thumbnail-ai" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-medium py-1.5 px-5 rounded-lg text-xs shadow-lg hover:shadow-amber-900/30 transition flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Generar Portada</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1621,6 +1744,166 @@
             textarea.focus();
             closeLinkPickerModal();
             handleAutoSave();
+        }
+
+        function openRemoteTextModal() {
+            const modal = document.getElementById('remote-text-modal');
+            if (!modal) return;
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+            document.getElementById('remote-text-url').value = '';
+            const wrapCheckbox = document.getElementById('remote-text-wrap');
+            if (wrapCheckbox) wrapCheckbox.checked = false;
+            const markdownCheckbox = document.getElementById('remote-text-markdown');
+            if (markdownCheckbox) markdownCheckbox.checked = false;
+            modal.classList.remove('hidden');
+            document.getElementById('remote-text-url').focus();
+        }
+
+        function closeRemoteTextModal() {
+            const modal = document.getElementById('remote-text-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        {% raw %}
+        function submitRemoteText() {
+            const urlInput = document.getElementById('remote-text-url');
+            if (!urlInput) return;
+            const url = urlInput.value.trim();
+            if (!url) {
+                alert("Por favor, introduce una URL válida.");
+                return;
+            }
+            
+            const wrapCheckbox = document.getElementById('remote-text-wrap');
+            const shouldWrap = wrapCheckbox && wrapCheckbox.checked;
+            
+            const markdownCheckbox = document.getElementById('remote-text-markdown');
+            const shouldMarkdown = markdownCheckbox && markdownCheckbox.checked;
+            
+            const textarea = document.getElementById('editor-textarea');
+            if (!textarea) return;
+            
+            let shortcode = '';
+            if (shouldWrap || shouldMarkdown) {
+                shortcode = `{{< texto_remoto url="${url}"`;
+                if (shouldWrap) shortcode += ' wrap="true"';
+                if (shouldMarkdown) shortcode += ' markdown="true"';
+                shortcode += ' >}}';
+            } else {
+                shortcode = `{{< texto_remoto "${url}" >}}`;
+            }
+            
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const originalContent = textarea.value;
+            
+            textarea.value = originalContent.substring(0, start) + shortcode + originalContent.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + shortcode.length;
+            textarea.focus();
+            
+            closeRemoteTextModal();
+            handleAutoSave();
+        }
+        {% endraw %}
+
+        function openThumbnailGeneratorModal() {
+            const modal = document.getElementById('thumbnail-generator-modal');
+            if (!modal) return;
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+            
+            const titleInput = document.getElementById('thumbnail-title-input');
+            if (titleInput) {
+                titleInput.value = '';
+            }
+            
+            document.getElementById('thumbnail-preview-container').innerHTML = 
+                '<span class="text-slate-600 text-xs text-center px-4"><i class="fa-solid fa-image text-2xl mb-2 block"></i>Previsualización</span>';
+            document.getElementById('thumbnail-generator-status').textContent = '';
+            
+            const btn = document.getElementById('btn-generate-thumbnail-ai');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Generar Portada</span>';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeThumbnailGeneratorModal() {
+            const modal = document.getElementById('thumbnail-generator-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        async function generateThumbnailAI() {
+            if (!currentEditableFilePath) {
+                alert("Primero debes estar editando un artículo.");
+                return;
+            }
+            
+            const statusDiv = document.getElementById('thumbnail-generator-status');
+            const previewContainer = document.getElementById('thumbnail-preview-container');
+            const btn = document.getElementById('btn-generate-thumbnail-ai');
+            
+            statusDiv.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-1 text-amber-400"></i> Generando portada con IA...';
+            statusDiv.className = 'text-[11px] font-medium text-amber-400 mt-3 text-center';
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i><span>Generando...</span>';
+            }
+            
+            previewContainer.innerHTML = '<div class="text-slate-500 py-6 text-center text-xs"><i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Esperando imagen...</div>';
+            
+            try {
+                const titleInput = document.getElementById('thumbnail-title-input');
+                const customTitle = titleInput ? titleInput.value.trim() : '';
+                
+                const res = await fetch('/api/generate-thumbnail', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_path: currentEditableFilePath,
+                        custom_title: customTitle
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok && data.status === 'success') {
+                    const cacheBuster = `?t=${new Date().getTime()}`;
+                    previewContainer.innerHTML = `<img src="${data.web_url}${cacheBuster}" class="w-full h-full object-cover rounded-lg" />`;
+                    
+                    statusDiv.innerHTML = '<i class="fa-solid fa-circle-check mr-1 text-emerald-400"></i> ¡Portada guardada con éxito como thumbnail de este post!';
+                    statusDiv.className = 'text-[11px] font-semibold text-emerald-400 mt-3 text-center';
+                    
+                    const iframe = document.getElementById('preview-iframe');
+                    if (iframe) {
+                        iframe.src = iframe.src;
+                    }
+                } else {
+                    statusDiv.textContent = `Error: ${data.message || 'Error desconocido'}`;
+                    statusDiv.className = 'text-[11px] font-semibold text-rose-400 mt-3 text-center';
+                    previewContainer.innerHTML = '<span class="text-rose-400 text-xs text-center px-4"><i class="fa-solid fa-triangle-exclamation text-2xl mb-2 block"></i>Error</span>';
+                }
+            } catch (err) {
+                console.error("Error generating thumbnail:", err);
+                statusDiv.textContent = 'Error de conexión al servidor.';
+                statusDiv.className = 'text-[11px] font-semibold text-rose-400 mt-3 text-center';
+                previewContainer.innerHTML = '<span class="text-rose-400 text-xs text-center px-4"><i class="fa-solid fa-triangle-exclamation text-2xl mb-2 block"></i>Error</span>';
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-rotate"></i><span>Volver a Generar</span>';
+                }
+            }
         }
 
         let autoSaveTimer = null;

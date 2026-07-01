@@ -4,7 +4,7 @@ import shutil
 import threading
 import time
 import socket
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -948,6 +948,306 @@ def stop_hugo_internal():
         subprocess.run(["pkill", "-f", "hugo"], capture_output=True)
         add_log("Stopped any running Hugo instance.")
         hugo_proc = None
+
+import io
+import re
+from PIL import Image
+
+def slugify_simple(text):
+    text = text.lower()
+    accents = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", "ü": "u"}
+    for k, v in accents.items():
+        text = text.replace(k, v)
+    text = re.sub(r'[^a-z0-9\s.-]', '', text)
+    text = re.sub(r'[\s_]+', '-', text)
+    text = re.sub(r'-+', '-', text)
+    return text.strip('-')
+
+def parse_article_meta(file_path):
+    title = ""
+    tags = []
+    date_str = ""
+    slug = ""
+    
+    if not os.path.exists(file_path):
+        return None
+        
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            
+        # Extract title
+        title_match = re.search(r'^title:\s*["\']?([^"\n\']+)["\']?', content, re.MULTILINE | re.IGNORECASE)
+        if title_match:
+            title = title_match.group(1).strip()
+            
+        # Extract slug
+        slug_match = re.search(r'^slug:\s*["\']?([^"\n\']+)["\']?', content, re.MULTILINE | re.IGNORECASE)
+        if slug_match:
+            slug = slug_match.group(1).strip()
+        else:
+            base_name = os.path.basename(file_path).rsplit(".", 1)[0]
+            clean_base = re.sub(r'^\d{8}_', '', base_name)
+            clean_base = re.sub(r'^\d{4}-\d{2}-\d{2}-', '', clean_base)
+            slug = clean_base
+            
+        # Extract date
+        date_match = re.search(r'^date:\s*["\']?([^"\n\'T\s]+)', content, re.MULTILINE | re.IGNORECASE)
+        if date_match:
+            date_str = date_match.group(1).replace("-", "").strip()
+        else:
+            fn = os.path.basename(file_path)
+            fn_date_match = re.match(r'^(\d{4})-(\d{2})-(\d{2})', fn)
+            if fn_date_match:
+                date_str = "".join(fn_date_match.groups())
+            else:
+                import datetime
+                date_str = datetime.date.today().strftime("%Y%m%d")
+                
+        # Extract tags
+        tags_section_match = re.search(r'^tags:\s*\n((?:\s*-\s*.*?\n)+)', content, re.MULTILINE | re.IGNORECASE)
+        if tags_section_match:
+            tags_lines = tags_section_match.group(1).split("\n")
+            for line in tags_lines:
+                tag_match = re.search(r'-\s*["\']?(.*?)["\']?$', line)
+                if tag_match:
+                    tags.append(tag_match.group(1).strip())
+        else:
+            tags_inline_match = re.search(r'^tags:\s*\[(.*?)\]', content, re.MULTILINE | re.IGNORECASE)
+            if tags_inline_match:
+                tags = [t.strip().strip('"').strip("'") for t in tags_inline_match.group(1).split(",")]
+                
+    except Exception as e:
+        print(f"Error parsing article meta: {e}")
+        
+    return {
+        "title": title,
+        "tags": tags,
+        "date_str": date_str,
+        "slug": slug
+    }
+
+@app.route("/api/generate-thumbnail", methods=["POST"])
+def generate_thumbnail():
+    data = request.json or {}
+    file_path = data.get("file_path")
+    custom_title = data.get("custom_title", "").strip()
+    
+    if not file_path:
+        return jsonify({"status": "error", "message": "Falta la ruta del archivo."}), 400
+        
+    full_path = os.path.abspath(os.path.join(REPO_DIR, file_path))
+    meta = parse_article_meta(full_path)
+    if not meta:
+        return jsonify({"status": "error", "message": f"No se pudo leer la metadata del artículo en la ruta: {file_path}"}), 400
+        
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        dotenv_path = "/site/.env"
+        if os.path.exists(dotenv_path):
+            with open(dotenv_path, "r") as f:
+                for line in f:
+                    if line.startswith("OPENROUTER_API_KEY="):
+                        api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        break
+                        
+    if not api_key:
+        return jsonify({
+            "status": "error", 
+            "message": "Falta la clave API de OpenRouter. Por favor, añádela como OPENROUTER_API_KEY en tu archivo .env y reinicia el servicio."
+        }), 400
+        
+    model = os.environ.get("OPENROUTER_IMAGE_MODEL")
+    if not model:
+        dotenv_path = "/site/.env"
+        if os.path.exists(dotenv_path):
+            with open(dotenv_path, "r") as f:
+                for line in f:
+                    if line.startswith("OPENROUTER_IMAGE_MODEL="):
+                        model = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        break
+    if not model:
+        model = "google/gemini-2.5-flash-image"
+        
+    image_title = custom_title if custom_title else meta["title"]
+    
+    # Read the article content snippet
+    article_content = ""
+    try:
+        with open(full_path, "r", encoding="utf-8") as f:
+            article_content = f.read()
+    except Exception as e:
+        add_log(f"⚠️ Error al leer contenido completo para prompt: {e}")
+        
+    # Generate optimized prompt via Gemini 2.5 Flash on OpenRouter
+    add_log("🧠 Optimizando prompt para el thumbnail con Gemini...")
+    optimized_prompt = ""
+    import urllib.request
+    import json
+    try:
+        llm_headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        llm_payload = {
+            "model": "google/gemini-2.5-flash",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert graphic designer. Read the article title, tags, and content, "
+                        "and output a single detailed prompt for an image generation model (FLUX/SDXL) to design the article's cover/thumbnail.\n"
+                        "Requirements for the generated image:\n"
+                        f"1. The text '{image_title}' must be written clearly and legibly at the top of the image in a modern, elegant, clean sans-serif font. The text must occupy the full width and approximately the top 90px of the 300px image, using a large font size to make it highly visible and prominent.\n"
+                        f"2. Below the title, include high-quality, professional, minimalist 3D illustrations, drawings, or icons representing the core topic of the article and specifically referring to its tags: {', '.join(meta['tags'])}.\n"
+                        "3. The background must be solid, pure white. Do not use dark, black, or colorful backgrounds. The entire background of the image must be completely white.\n"
+                        "4. The illustrations and drawings must occupy all the remaining useful space of the 300x300px canvas, except for the top 90px (reserved for the title), the bottom 50px (reserved for the blog name, from y=250px to y=300px), and the bottom-right 100x100px corner (reserved for the logo, from x=200px to x=300px and y=200px to y=300px) which must be kept completely clean and empty of main subjects.\n"
+                        "Important: Return ONLY the raw prompt text. No introduction, no quotes, no markdown blocks."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Title: {image_title}\nTags: {', '.join(meta['tags'])}\nContent snippet:\n{article_content[:2000]}"
+                }
+            ],
+            "temperature": 0.5
+        }
+        
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/chat/completions",
+            data=json.dumps(llm_payload).encode("utf-8"),
+            headers=llm_headers,
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=20) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            choices = res_data.get("choices", [])
+            if choices:
+                optimized_prompt = choices[0].get("message", {}).get("content", "").strip()
+                if optimized_prompt.startswith('"') and optimized_prompt.endswith('"'):
+                    optimized_prompt = optimized_prompt[1:-1].strip()
+                add_log(f"🧠 Prompt optimizado por IA: {optimized_prompt}")
+    except Exception as e:
+        add_log(f"⚠️ Error al llamar a Gemini para optimizar el prompt: {e}")
+        
+    if not optimized_prompt:
+        # Fallback if LLM fails
+        tags_str = ", ".join(meta["tags"]) if meta["tags"] else "tecnología"
+        optimized_prompt = f"A beautiful, clean, modern tech illustration representing the theme: {tags_str}. The text '{image_title}' must be written clearly at the top in a clean, legible, modern font, spanning the full width of the image and occupying approximately the top 90px with a large font size. Solid pure white background. Minimalist 3D render, centered composition. The illustrations must occupy the remaining space, keeping the bottom 50px and bottom-right 100x100px corner clean."
+
+    payload = {
+        "model": model,
+        "prompt": optimized_prompt,
+        "aspect_ratio": "1:1",
+        "n": 1
+    }
+    
+    add_log(f"🎨 Llamando a OpenRouter ({model}) para generar thumbnail...")
+    try:
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/images",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=60) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            
+        img_data = res_data.get("data", [])
+        if not img_data:
+            add_log(f"❌ Respuesta API de OpenRouter vacía: {res_data}")
+            return jsonify({"status": "error", "message": "No se recibieron datos de imagen en la respuesta de OpenRouter."}), 500
+            
+        first_img = img_data[0]
+        img_url = first_img.get("url")
+        img_b64 = first_img.get("b64_json")
+        
+        img_bytes = None
+        if img_b64:
+            import base64
+            img_bytes = base64.b64decode(img_b64)
+        elif img_url:
+            with urllib.request.urlopen(img_url, timeout=30) as img_res:
+                img_bytes = img_res.read()
+                
+        if not img_bytes:
+            return jsonify({"status": "error", "message": "No se pudo descargar o decodificar la imagen generada."}), 500
+            
+        gen_img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+        gen_img = gen_img.resize((300, 300), Image.Resampling.LANCZOS)
+
+        overlay_path = "/site/thumbnail_overlay.png"
+        if not os.path.exists(overlay_path):
+            overlay_path = os.path.join(REPO_DIR, "thumbnail_overlay.png")
+            
+        if os.path.exists(overlay_path):
+            try:
+                overlay_img = Image.open(overlay_path).convert("RGBA")
+                if overlay_img.size != (300, 300):
+                    overlay_img = overlay_img.resize((300, 300), Image.Resampling.LANCZOS)
+                
+                # If the overlay is fully opaque, key out the white background
+                alphas = [p[3] for p in overlay_img.getdata()]
+                if not alphas or min(alphas) == 255:
+                    datas = overlay_img.getdata()
+                    newData = []
+                    for item in datas:
+                        # If it is white or close to white, make it transparent
+                        if item[0] > 250 and item[1] > 250 and item[2] > 250:
+                            newData.append((255, 255, 255, 0))
+                        else:
+                            newData.append(item)
+                    overlay_img.putdata(newData)
+                    add_log("📸 Se detectó plantilla opaca; se convirtió el fondo blanco a transparente.")
+                
+                gen_img = Image.alpha_composite(gen_img, overlay_img)
+                add_log("📸 Se aplicó la plantilla superpuesta (thumbnail_overlay.png)")
+            except Exception as ov_err:
+                add_log(f"⚠️ Error al aplicar superposición de plantilla: {ov_err}")
+        else:
+            add_log("⚠️ No se encontró la plantilla 'thumbnail_overlay.png' en la raíz. Generando imagen sin plantilla.")
+                 
+        target_dir = os.path.join(REPO_DIR, "static", "images")
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # Try to find the exact filename from the article's front matter
+        thumbnail_match = re.search(r'^thumbnail:\s*["\']?(?:images/)?([^"\n\']+)["\']?', article_content, re.MULTILINE | re.IGNORECASE)
+        if thumbnail_match:
+            filename = thumbnail_match.group(1).strip()
+        else:
+            # Fallback: keep underscores of the slug
+            base_name = os.path.basename(file_path).rsplit(".", 1)[0]
+            clean_base = re.sub(r'^\d{8}_', '', base_name)
+            clean_base = re.sub(r'^\d{4}-\d{2}-\d{2}-', '', clean_base)
+            filename = f"{meta['date_str']}_{clean_base}_00.jpg"
+            
+        target_path = os.path.join(target_dir, filename)
+        
+        rgb_img = gen_img.convert("RGB")
+        rgb_img.save(target_path, "JPEG", quality=90)
+        
+        add_log(f"🎉 Portada thumbnail generada y guardada con éxito en: static/images/{filename}")
+        
+        return jsonify({
+            "status": "success",
+            "filename": filename,
+            "web_url": f"/static/images/{filename}"
+        })
+        
+    except Exception as e:
+        add_log(f"❌ Error al generar thumbnail: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/static/images/<path:filename>")
+def serve_repo_static_images(filename):
+    return send_from_directory(os.path.join(REPO_DIR, "static", "images"), filename)
+
+@app.route("/images/<path:filename>")
+def serve_repo_images(filename):
+    return send_from_directory(os.path.join(REPO_DIR, "static", "images"), filename)
 
 @app.route("/")
 def index():

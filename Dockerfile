@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     ca-certificates \
     python3 \
     py3-flask \
+    py3-pillow \
     procps
 
 # Descargar Hugo Extended 0.152.0 desde GitHub
